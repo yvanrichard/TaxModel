@@ -1,15 +1,15 @@
 model{
   for(s in 1:NSPECIES){
-    lmass[s] ~ dnorm(speciesmu[s],tau)
+    lmass[s] ~ dnorm(speciesmu[s],tau[s])
     # species mean drawn from family dist 
     speciesdev[s] <- speciesmu[s] - genusmu[genus[s]]
     speciesmu[s] <- genusmu[genus[s]] + genus.xi[genus[s]]*species.eta[s]
     
-    l_obs_sp[s] ~ dnorm(speciesmu[s]+species.xi[s]*sp_pred.eta[s],tau)
+    #l_obs_sp[s] ~ dnorm(speciesmu[s]+species.xi[s]*sp_pred.eta[s],tau)
     # species tau drawn from hierarchical distr over all families
-    sp_pred.eta[s] ~ dnorm(0,species.prec)
+    #sp_pred.eta[s] ~ dnorm(0,species.prec)
     species.eta[s] ~ dnorm(0,genus.prec)
-    species.xi[s] ~ dnorm(0,species.scale^-2)
+    species.xi[s] ~ dnorm(0,species.scale)
   }
   
   # genus fx from order distributions
@@ -17,11 +17,11 @@ model{
     # genus mean drawn from family dist
     genusdev[g] <- genusmu[g] - familymu[family[g]]
     genusmu[g] <- familymu[family[g]]+family.xi[family[g]]*genus.eta[g]
-    l_obs_gen[g] ~ dnorm(genusmu[g]+genus.xi[g]*gen_pred.eta[g],tau)
+    #l_obs_gen[g] ~ dnorm(genusmu[g]+genus.xi[g]*gen_pred.eta[g],tau)
     # genus tau drawn from hierarchical distr over all families
-    gen_pred.eta[g] ~ dnorm(0,genus.prec)
+    #gen_pred.eta[g] ~ dnorm(0,genus.prec)
     genus.eta[g] ~ dnorm(0,family.prec)
-    genus.xi[g] ~ dnorm(0,genus.scale^-2)
+    genus.xi[g] ~ dnorm(0,genus.scale)
   }
   
   # family fx from order distribution
@@ -29,42 +29,42 @@ model{
     # family mean drawn from order dist
     familydev[f] <- familymu[f] - ordermu[order[f]]
     familymu[f] <- ordermu[order[f]]+order.xi[order[f]]*family.eta[f]
-    l_obs_fam[f] ~ dnorm(familymu[f]+family.xi[f]*fam_pred.eta[f],tau)
+    #l_obs_fam[f] ~ dnorm(familymu[f]+family.xi[f]*fam_pred.eta[f],tau)
     # family tau drawn from hierarchical distr over all families
-    fam_pred.eta[f] ~ dnorm(0,family.prec)
+    #fam_pred.eta[f] ~ dnorm(0,family.prec)
     family.eta[f] ~ dnorm(0,order.prec)
-    family.xi[f] ~ dnorm(0,family.scale^-2)
+    family.xi[f] ~ dnorm(0,family.scale)
   }
   
   # order fx from class distribution
   for(o in 1:NORDERS){
     # order mean drawn from order dist
     ordermu[o] <- grandmu+grand.xi*order.eta[o]
-    l_obs_ord[o] ~ dnorm(ordermu[o]+order.xi[o]*ord_pred.eta[o],tau)
+    #l_obs_ord[o] ~ dnorm(ordermu[o]+order.xi[o]*ord_pred.eta[o],tau)
     # order tau drawn from hierarchical distr over all orders
-    ord_pred.eta[o] ~ dnorm(0,order.prec)
+    #ord_pred.eta[o] ~ dnorm(0,order.prec)
     order.eta[o] ~ dnorm(0,grand.prec)
-    order.xi[o] ~ dnorm(0,order.scale^-2)
+    order.xi[o] ~ dnorm(0,order.scale)
   }
   
   # priors tax hierachy
-  species.scale ~ dgamma(0.1,0.1)
+  species.scale ~ dgamma(0.001,0.001)
   species.prec ~ dgamma(0.5,0.5)
   
-  family.scale  ~ dgamma(0.1,0.1)
+  family.scale  ~ dgamma(0.001,0.001)
   family.prec ~ dgamma(0.5,0.5)
   
-  genus.scale  ~ dgamma(0.1,0.1)
+  genus.scale  ~ dgamma(0.001,0.001)
   genus.prec ~ dgamma(0.5,0.5)
   
-  order.scale   ~ dgamma(0.1,0.1)
+  order.scale   ~ dgamma(0.001,0.001)
   order.prec ~ dgamma(0.5,0.5)
   
-  grand.xi ~ dnorm(0,0.1)
+  grand.xi ~ dnorm(0,0.0001)
   grand.prec ~ dgamma(0.5,0.5)
   #sigma.grand <- abs(grand.xi)/sqrt(grand.prec) 
   
-  grandtau ~ dgamma(0.01,0.01)
+  #grandtau ~ dgamma(0.01,0.01)
   grandmu ~ dnorm(0,1e-6)
   
   
@@ -85,5 +85,5 @@ model{
   sd.order   <- sd(ordermu)
   # sd.continent_eff <- sd(continent_eff)
   
-  tau ~ dgamma(0.01,0.01)
+  #tau ~ dgamma(0.01,0.01)
 }
