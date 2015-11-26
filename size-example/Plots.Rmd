@@ -1,0 +1,83 @@
+---
+title: "size plots"
+output: pdf_document
+---
+
+```{r tax sd}
+
+load("tax_model_runs.Rdata")
+
+sds <- list()
+sds[[1]] <- JM_rfx$BUGSoutput$sims.list[grepl('sd',names(JM_rfx$BUGSoutput$sims.list))]
+sds[[2]] <- JM_rfx_h$BUGSoutput$sims.list[grepl('sd',names(JM_rfx_h$BUGSoutput$sims.list))]
+sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
+
+msd <- reshape2::melt(sds)
+
+msd <- msd %>% 
+  mutate(Factor = do.call('rbind',strsplit(L2,'sd.'))[,2]) %>%
+  group_by(L1,Factor) %>%
+  summarise(means = median(value),
+            q1 = quantile(value,0.025),
+            q11 = quantile(value,0.25),
+            q33 = quantile(value,0.75),
+            q3 = quantile(value,0.975))
+  
+msd$Factor <- rep(c('Family','Genus','Order','Species'),3)
+msd$L1 <- rep(c('rfx','rfx_h','rfx_ht'),each=4)
+colnames(msd)[1] <- 'model'
+
+msd$Factor <- factor(msd$Factor,levels = c('Species','Genus','Family','Order'))
+
+dw=0.75
+ggplot(msd) + 
+  geom_point(aes(x=Factor, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
+  theme_classic() + 
+  coord_flip() #+ 
+  #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
+  #xlab('Effect')
+
+```
+
+```{r tax sd}
+
+sds <- list()
+sds[[1]] <- JM_rfx$BUGSoutput$sims.list[grepl('mu_pred',names(JM_rfx$BUGSoutput$sims.list))]
+sds[[2]] <- JM_rfx_h$BUGSoutput$sims.list[grepl('mu_pred',names(JM_rfx_h$BUGSoutput$sims.list))]
+#sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
+
+msd <- reshape2::melt(sds)
+
+msd <- msd %>% 
+  mutate(Factor = L2) %>%
+  group_by(L1,Factor,Var2) %>%
+  summarise(means = median(value),
+            q1 = quantile(value,0.025),
+            q11 = quantile(value,0.25),
+            q33 = quantile(value,0.75),
+            q3 = quantile(value,0.975))
+  
+msd$Factor <- rep(rep(c('Family','Genus','Order','Species'),each=50),2)
+msd$L1 <- rep(c('rfx','rfx_h'),each=200)
+colnames(msd)[1] <- 'model'
+
+msd$Factor <- factor(msd$Factor,levels = c('Species','Genus','Family','Order'))
+msd$log10Mass <- sizes$lmass[pred]
+msd <- msd %>% group_by(model,Factor) %>% arrange(log10Mass) %>% mutate(Var2 = 1:n())
+
+dw=2
+ggplot(msd) + 
+  facet_wrap(~Factor)+
+  geom_point(aes(x=Var2*3, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+ 
+  geom_linerange(aes(x=Var2*3, y=means,ymin=q1,ymax=q3,col=model),size=1, position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Var2*3, y=means,ymin=q11,ymax=q33,col=model),size=2, position=position_dodge(width=dw)) + 
+  theme_classic()+
+   geom_point(aes(x=Var2*3, y=log10Mass), size=4, position=position_dodge(width=dw)) 
+  #coord_flip() #+ 
+  #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
+  #xlab('Effect')
+
+```

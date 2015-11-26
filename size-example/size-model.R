@@ -9,7 +9,6 @@ model{
     # species tau drawn from hierarchical distr over all families
     #sp_pred.eta[s] ~ dnorm(0,species.prec)
     species.eta[s] ~ dnorm(0,genus.prec)
-    species.xi[s] ~ dnorm(0,species.scale)
   }
   
   # genus fx from order distributions
@@ -20,6 +19,7 @@ model{
     #l_obs_gen[g] ~ dnorm(genusmu[g]+genus.xi[g]*gen_pred.eta[g],tau)
     # genus tau drawn from hierarchical distr over all families
     #gen_pred.eta[g] ~ dnorm(0,genus.prec)
+    sigma.genus[g] <- abs(genus.xi[g])/sqrt(genus.prec)
     genus.eta[g] ~ dnorm(0,family.prec)
     genus.xi[g] ~ dnorm(0,genus.scale)
   }
@@ -32,6 +32,7 @@ model{
     #l_obs_fam[f] ~ dnorm(familymu[f]+family.xi[f]*fam_pred.eta[f],tau)
     # family tau drawn from hierarchical distr over all families
     #fam_pred.eta[f] ~ dnorm(0,family.prec)
+    sigma.family[f] <- abs(family.xi[f])/sqrt(family.prec)
     family.eta[f] ~ dnorm(0,order.prec)
     family.xi[f] ~ dnorm(0,family.scale)
   }
@@ -44,8 +45,12 @@ model{
     # order tau drawn from hierarchical distr over all orders
     #ord_pred.eta[o] ~ dnorm(0,order.prec)
     order.eta[o] ~ dnorm(0,grand.prec)
+    sigma.order[o] <- abs(order.xi[o])/sqrt(order.prec)
+    
     order.xi[o] ~ dnorm(0,order.scale)
   }
+  
+  sigma.grand <- abs(grand.xi)/sqrt(grand.prec)
   
   # priors tax hierachy
   species.scale ~ dgamma(0.001,0.001)
@@ -79,6 +84,10 @@ model{
 #   cont.prec ~ dgamma(0.5,0.5)
   
   # finite population sds
+  sd.sigma.family <- sd(sigma.family)
+  sd.sigma.genus <- sd(sigma.genus)
+  sd.sigma.order <- sd(sigma.order)
+  
   sd.genus <- sd(genusdev)
   sd.species <- sd(speciesdev)
   sd.family  <- sd(familydev)

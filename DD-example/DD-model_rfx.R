@@ -2,7 +2,7 @@ model{
 
   for(p in 1:NPRED){
 
-    mu_pred_s[p] <- grandmu + speciesmu[pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    mu_pred_s[p] <- grandmu + speciesmu[species_pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     mu_pred_g[p] <- grandmu + species_predict[p] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     mu_pred_f[p] <- grandmu + species_predict[p] + genus_predict[p] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     mu_pred_o[p] <- grandmu + species_predict[p] + genus_predict[p] + family_predict[p] + ordermu[order_pred[p]]
@@ -18,13 +18,16 @@ model{
     
   }
   
-  
-  for(s in 1:NSPECIES){
-    lmass[s] ~ dnorm(mu[s],tau[s])
-    mu[s] <- grandmu + speciesmu[s] + genusmu[genus[s]] + familymu[family[s]] + ordermu[order[s]]
+  for(i in 1:NOBS){
+    lDD[i] ~ dnorm(mu[i],tau)
+    mu[i] <- grandmu + speciesmu[species[i]] + genusmu[genus[i]] + familymu[family[i]] + ordermu[order[i]]
     
-    speciesmu[s] <- genus.xi*species.eta[s]
-    species.eta[s] ~ dnorm(0,genus.prec)
+  }
+  
+  for(i in 1:NSPECIES){
+    
+    speciesmu[i] <- genus.xi*species.eta[i]
+    species.eta[i] ~ dnorm(0,genus.prec)
     
   }
   
@@ -86,8 +89,9 @@ model{
   sd.species <- sd(speciesmu)
   sd.family  <- sd(familymu)
   sd.order   <- sd(ordermu)
+  sd.pop <- 1/sqrt(tau)
   # sd.continent_eff <- sd(continent_eff)
   
-  #tau ~ dgamma(0.001,0.001)
+  tau ~ dgamma(0.001,0.001)
   
 }
