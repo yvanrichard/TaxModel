@@ -1,0 +1,97 @@
+---
+title: "size plots"
+output: pdf_document
+---
+
+```{r tax sd}
+
+load("tax_model_runs.Rdata")
+
+sds <- list()
+sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[1800:3000,,grepl('sd',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
+sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[1800:3000,,grepl('sd',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]]) & !grepl('sigma',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
+#sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
+
+ssd <- plyr::llply(sds,function(x) {
+  n=dimnames(x)[[3]]
+  dim(x) <- c(dim(x)[1]*dim(x)[2],dim(x)[3])
+  colnames(x) <- n
+  apply(as.data.frame(x),1,function(z) z/sum(z))})
+
+msd <- reshape2::melt(ssd)
+
+msd <- msd %>% 
+  mutate(Factor = do.call('rbind',strsplit(as.character(Var1),'sd.'))[,2]) %>%
+  group_by(L1,Factor) %>%
+  summarise(means = median(value),
+            q1 = quantile(value,0.025),
+            q11 = quantile(value,0.25),
+            q33 = quantile(value,0.75),
+            q3 = quantile(value,0.975))
+  
+msd$Factor <- rep(c('Class','Family','Individual','Order','PPMR','Species'),2)
+msd$L1 <- rep(c('rfx','rfx_h'),each=6)
+colnames(msd)[1] <- 'model'
+
+msd$Factor <- factor(msd$Factor,levels = c('PPMR','Individual','Species','Family','Order','Class'))
+
+dw=0.75
+ggplot(msd) + 
+geom_point(aes(x=Factor, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=position_dodge(width=dw)) + 
+geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
+theme_classic() + 
+coord_flip() #+ 
+  
+#ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
+  #xlab('Effect')
+
+```
+
+```{r tax sd}
+
+sds <- list()
+sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[1800:3000,,grepl('pred',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
+sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[1800:3000,,grepl('pred',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
+#sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
+
+ssd <- plyr::llply(sds,function(x) {
+  n=dimnames(x)[[3]]
+  dim(x) <- c(dim(x)[1]*dim(x)[2],dim(x)[3])
+  colnames(x) <- n
+  (x)})
+
+
+msd <- reshape2::melt(ssd)
+
+msd <- msd %>% 
+  mutate(Factor = Var2) %>%
+  group_by(L1,Factor) %>%
+  summarise(means = median(value),
+            q1 = quantile(value,0.025),
+            q11 = quantile(value,0.25),
+            q33 = quantile(value,0.75),
+            q3 = quantile(value,0.975))
+  
+msd$Factor <- rep(rep(c('Family','Ind','Order','Species'),each=50),2)
+msd$L1 <- rep(c('rfx','rfx_h'),each=200)
+colnames(msd)[1] <- 'model'
+
+msd$Factor <- factor(msd$Factor,levels = c('Ind','Species','Family','Order'))
+  msd$PPMR <- log10(ppmr.data$Predator.mass/ppmr.data$Prey.mass)[pred]
+msd <- msd %>% group_by(model,Factor) %>% arrange(PPMR) %>% mutate(Var2 = 1:n())
+
+dw=2
+ggplot(msd) + 
+  facet_wrap(~Factor)+
+  geom_point(aes(x=Var2*3, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+ 
+  geom_linerange(aes(x=Var2*3, y=means,ymin=q1,ymax=q3,col=model),size=1, position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Var2*3, y=means,ymin=q11,ymax=q33,col=model),size=2, position=position_dodge(width=dw)) + 
+  theme_classic()+
+   geom_point(aes(x=Var2*3, y=PPMR), size=4, position=position_dodge(width=dw)) 
+  #coord_flip() #+ 
+  #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
+  #xlab('Effect')
+
+```

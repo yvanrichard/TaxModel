@@ -1,11 +1,20 @@
 ---
-title: "size plots"
+title: "DD plots"
 output: pdf_document
 ---
 
-```{r tax sd}
+```{r pre,echo=F,message=F,warning=F}
 
-load("tax_model_runs.Rdata")
+knitr::opts_chunk$set(warning=F,message=F)
+require("ggplot2")
+require("dplyr")
+
+```
+
+```{r tax sd, fig.cap="Proportion of variance attributed to each taxonomic level in the analysis."}
+
+
+load("DD_model_runs.Rdata")
 
 sds <- list()
 sds[[1]] <- DD_rfx$BUGSoutput$sims.list[grepl('sd',names(DD_rfx$BUGSoutput$sims.list))]
@@ -37,17 +46,17 @@ geom_point(aes(x=Factor, y=means, col=model), size=4, position=position_dodge(wi
 geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=position_dodge(width=dw)) + 
 geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
 theme_classic() + 
-coord_flip() #+ 
+coord_flip() + 
   #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
-  #xlab('Effect')
+  ylab('Proportion of variance')
 
 ```
 
-```{r tax sd}
+```{r predictions, fig.cap="Prediction of degree days to development from taxonomic factors only, at each of four taxonomic levels. At each level, predictions are made under the assuption that the next lower taxonomic level for the species in question was not included in the analysis (e.g., at the family level, we assumed taht the genus for the prediction was not part of the analysis, and the genus mean had to be drawn from the posterior predictive distribution."}
 
 sds <- list()
-sds[[1]] <- DD_rfx$BUGSoutput$sims.list[grepl('mu_pred',names(DD_rfx$BUGSoutput$sims.list))]
-sds[[2]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('mu_pred',names(DD_rfx_h$BUGSoutput$sims.list))]
+sds[[1]] <- DD_rfx$BUGSoutput$sims.list[grepl('pred',names(DD_rfx$BUGSoutput$sims.list))]
+sds[[2]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_h$BUGSoutput$sims.list))]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 msd <- reshape2::melt(sds)
@@ -77,9 +86,9 @@ ggplot(msd) +
   geom_linerange(aes(x=Var2*3, y=means,ymin=q1,ymax=q3,col=model),size=1, position=position_dodge(width=dw)) + 
   geom_linerange(aes(x=Var2*3, y=means,ymin=q11,ymax=q33,col=model),size=2, position=position_dodge(width=dw)) + 
   theme_classic()+
-   geom_point(aes(x=Var2*3, y=DD), size=4, position=position_dodge(width=dw)) 
+   geom_point(aes(x=Var2*3, y=DD), size=4, position=position_dodge(width=dw)) +
   #coord_flip() #+ 
-  #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
-  #xlab('Effect')
+  xlab('Prediction') + 
+  ylab('Test point')
 
 ```

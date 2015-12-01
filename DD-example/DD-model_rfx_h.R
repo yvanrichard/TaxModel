@@ -1,9 +1,17 @@
 model{
   
   for(p in 1:NPRED){
+    
+    pred_s[p] ~ dnorm(mu_pred_s[p],tau)
     mu_pred_s[p] <- grandmu + speciesmu[species_pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_g[p] ~ dnorm(mu_pred_g[p],tau)
     mu_pred_g[p] <- grandmu + species_predict[p] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_f[p] ~ dnorm(mu_pred_f[p],tau)
     mu_pred_f[p] <- grandmu + species_predict_u[p] + genus_predict[p] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_o[p] ~ dnorm(mu_pred_o[p],tau)
     mu_pred_o[p] <- grandmu + species_predict_u[p] + genus_predict_u[p] + family_predict[p] + ordermu[order_pred[p]]
     
     species_predict[p] <- genus.xi[genus_pred[p]]*species.eta_pred[p]
@@ -63,33 +71,22 @@ model{
   # priors tax hierachy
   species.prec ~ dgamma(0.5,0.5)
   
-  family.scale  ~ dgamma(0.001,0.001)
+  family.scale  ~ dgamma(5,0.5)
   family.prec ~ dgamma(0.5,0.5)
   family.xi_pred ~ dnorm(0,family.scale)
   
-  genus.scale  ~ dgamma(0.001,0.001)
+  genus.scale  ~ dgamma(5,0.5)
   genus.prec ~ dgamma(0.5,0.5)
   genus.xi_pred ~ dnorm(0,genus.scale)
   
-  order.scale   ~ dgamma(0.001,0.001)
+  order.scale   ~ dgamma(5,0.5)
   order.prec ~ dgamma(0.5,0.5)
   
-  grand.xi ~ dnorm(0,0.0001)
+  grand.xi ~ dnorm(0,10)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec)
   
-  grandmu ~ dnorm(0,1e-6)
-  
-  
-  #   # other rfx
-  #   
-  #   for (h in 1:CONTINENTS){
-  #     continent_eff[h] <- cont.xi*cont.eta[h] 
-  #     cont.eta[h] ~ dnorm(0,cont.prec)
-  #   }
-  #   
-  #   cont.xi ~ dnorm(0,0.1)
-  #   cont.prec ~ dgamma(0.5,0.5)
+  grandmu ~ dnorm(2.45,0.2)
   
   # finite population sds
   sd.sigma.species <- sd(sigma.species)
@@ -103,6 +100,6 @@ model{
   sd.pop <- 1/sqrt(tau)
   # sd.continent_eff <- sd(continent_eff)
   
-  tau ~ dgamma(0.001,0.001)
+  tau ~ dgamma(1,1)
   
 }

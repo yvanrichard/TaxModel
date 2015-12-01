@@ -2,8 +2,8 @@ require(dplyr)
 
 DD <- read.csv("DD.csv")
 
-DD <- DD %>% filter(!is.na(EADDC))
-
+DD <- DD %>% filter(!is.na(EADDC) & !is.na(BDT.C))
+DD<- DD[-c(522,1003,1555),]
 # need numbers
 n <- function(x) length(unique(x))
 nidx <- function(x) as.numeric(factor(x,levels=unique(x)))
@@ -25,7 +25,7 @@ ORD <- nidx(DD$Order)
 
 lpred <- 50
 pred = sample.int(n = length(DD$EADDC),lpred)
-DDdata_rfx_h <- list(lDD = log10(DD$EADDC),
+DDdata <- list(lDD = log10(DD$EADDC),
                        pred =pred ,
                        NOBS = nrow(DD),
                        NPRED = lpred,
@@ -45,42 +45,16 @@ DDdata_rfx_h <- list(lDD = log10(DD$EADDC),
 
 require(R2jags)
 
-DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
-                          n.iter = 30000,
-                          n.burnin = 10000,
-                          DIC = T,
-                          n.thin = 10,
-                          data=DDdata_rfx_h,
-                          n.chains = 3,
-                          parameters.to.save = c('sd.species',
-                                                 'sd.genus',
-                                                 'sd.family',
-                                                 'sd.order',
-                                                 'genus.scale',
-                                                 'family.scale',
-                                                 'order.scale',
-                                                 'grandmu',
-                                                 'grand.xi',
-                                                 'mu_pred_g',
-                                                 'mu_pred_f',
-                                                 'mu_pred_o',
-                                                 'mu_pred_s',
-                                                 'sd.sigma.species',
-                                                 'sd.sigma.genus',
-                                                 'sd.sigma.family',
-                                                 'sd.pop'))
-
-
 
 #DD_rfx_h
 #traceplot(DD_rfx_h)
 
 DD_rfx <- jags.parallel(model.file = 'DD-model_rfx.R',
-                        n.iter = 12500,
-                        n.burnin = 2500,
+                        n.iter = 310000,
+                        n.burnin = 10000,
                         DIC = T,
-                        n.thin = 5,
-                        data=DDdata_rfx_h,
+                        n.thin = 100,
+                        data=DDdata,
                         n.chains = 3,
                         parameters.to.save = c('sd.species',
                                                'sd.genus',
@@ -91,10 +65,10 @@ DD_rfx <- jags.parallel(model.file = 'DD-model_rfx.R',
                                                'order.scale',
                                                'grandmu',
                                                'grand.xi',
-                                               'mu_pred_g',
-                                               'mu_pred_f',
-                                               'mu_pred_o',
-                                               'mu_pred_s',
+                                               'pred_g',
+                                               'pred_f',
+                                               'pred_o',
+                                               'pred_s',
                                                'sigma.species',
                                                'sigma.genus',
                                                'sigma.family',
@@ -105,3 +79,31 @@ DD_rfx <- jags.parallel(model.file = 'DD-model_rfx.R',
 
 #DD_rfx
 #traceplot(DD_rfx)
+
+
+DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
+                          n.iter = 310000,
+                          n.burnin = 10000,
+                          DIC = T,
+                          n.thin = 100,
+                          data=DDdata,
+                          n.chains = 3,
+                          parameters.to.save = c('sd.species',
+                                                 'sd.genus',
+                                                 'sd.family',
+                                                 'sd.order',
+                                                 'genus.scale',
+                                                 'family.scale',
+                                                 'order.scale',
+                                                 'grandmu',
+                                                 'grand.xi',
+                                                 'pred_g',
+                                                 'pred_f',
+                                                 'pred_o',
+                                                 'pred_s',
+                                                 'sd.sigma.species',
+                                                 'sd.sigma.genus',
+                                                 'sd.sigma.family',
+                                                 'sd.pop'))
+
+save(DD,pred,DD_rfx,DD_rfx_h,file='DD_model_runs.Rdata')
