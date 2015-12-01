@@ -26,8 +26,11 @@ FAM <- nidx(sizes$family)
 # match unique family to order
 ORD <- nidx(sizes$order)
 
-
-jagsdata <- list(lmass = sizes$lmass,
+lpred <- 50
+pred = sample.int(n = length(sizes$lmass),lpred)
+jagsdata <- list(pred =pred ,
+                 NPRED = lpred,
+                 lmass = sizes$lmass,
                  CONTINENTS = n(sizes$continent),
                  NSPECIES = n(paste(sizes$genus,sizes$species,sep=' ')),
                  NGENUS = n(sizes$genus),
@@ -37,6 +40,9 @@ jagsdata <- list(lmass = sizes$lmass,
                  genus = GE[match(unique(SPECIES),SPECIES)],
                  family = FAM[match(unique(GE),GE)],
                  order = ORD[match(unique(FAM),FAM)],
+                 genus_pred = GE[pred],
+                 family_pred = FAM[pred],
+                 order_pred = ORD[pred],
                  tau=1/sizes$lmass*0.05
                  
 )
@@ -44,8 +50,8 @@ jagsdata <- list(lmass = sizes$lmass,
 require(R2jags)
 
 JM <- jags.parallel(model.file = 'size-model.R',
-                    n.iter = 325000,
-                    n.burnin = 25000,
+                    n.iter = 12500,
+                    n.burnin = 2500,
                     DIC = T,
                     n.thin = 5,
                     data=jagsdata,
@@ -54,18 +60,22 @@ JM <- jags.parallel(model.file = 'size-model.R',
                                            'sd.genus',
                                            'sd.family',
                                            'sd.order',
+                                           'mu_pred_g',
+                                           'mu_pred_f',
+                                           'mu_pred_o',
+                                           'mu_pred_s',
                                            'species.scale',
                                            'genus.scale',
                                            'family.scale',
                                            'order.scale',
-                                           'grandmu'))
+                                           'grandmu',
+                                           'hc_scale'))
 
 
 
-JM
+#JM
+# traceplot(JM)
 
-lpred <- 50
-pred = sample.int(n = length(sizes$lmass),lpred)
 jagsdata_rfx_h <- list(lmass = sizes$lmass,
                        pred =pred ,
                        NPRED = lpred,
@@ -92,7 +102,7 @@ JM_rfx_h <- jags.parallel(model.file = 'size-model_rfx_h.R',
                           DIC = T,
                           n.thin = 5,
                           data=jagsdata_rfx_h,
-                          n.chains = 3,
+                          n.chains = 1,
                           parameters.to.save = c('sd.species',
                                                  'sd.genus',
                                                  'sd.family',
@@ -108,12 +118,13 @@ JM_rfx_h <- jags.parallel(model.file = 'size-model_rfx_h.R',
                                                  'mu_pred_s',
                                                  'sd.sigma.species',
                                                  'sd.sigma.genus',
-                                                 'sd.sigma.family'))
+                                                 'sd.sigma.family',
+                                                 'hc_scale'))
 
 
 
-JM_rfx_h
-traceplot(JM_rfx_h)
+# JM_rfx_h
+# traceplot(JM_rfx_h)
 
 JM_rfx <- jags.parallel(model.file = 'size-model_rfx.R',
                         n.iter = 12500,
@@ -138,9 +149,10 @@ JM_rfx <- jags.parallel(model.file = 'size-model_rfx.R',
                                                'sigma.species',
                                                'sigma.genus',
                                                'sigma.family',
-                                               'sigma.order'))
+                                               'sigma.order',
+                                               'hc_scale'))
 
 
 
-JM_rfx
-traceplot(JM_rfx)
+# JM_rfx
+# traceplot(JM_rfx)

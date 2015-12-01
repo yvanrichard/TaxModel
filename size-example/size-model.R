@@ -1,5 +1,27 @@
 model{
-  for(s in 1:NSPECIES){
+
+  
+  for(p in 1:NPRED){
+    
+    mu_pred_s[p] <- speciesmu[p]
+    mu_pred_g[p] <- genusmu[genus_pred[p]] + genus.xi[genus_pred[p]]*species.eta_pred[p]
+    mu_pred_f[p] <- genus_mu_predict[p] + genus.xi_pred*species.eta_pred[p]
+    mu_pred_o[p] <- genus_mu_predict_u[p] + genus.xi_pred*species.eta_pred[p]
+    
+    species_predict[p] <- genus.xi[genus_pred[p]]*species.eta_pred[p]
+    species.eta_pred[p] ~ dnorm(0,genus.prec)
+    
+    genus_mu_predict[p] <- familymu[family_pred[p]]+family.xi[family_pred[p]]*genus.eta[p]
+    genus_mu_predict_u[p] <- family_mu_predict[p] + family.xi_pred*genus.eta_pred[p]
+    genus.eta_pred[p] ~ dnorm(0,family.prec)
+    
+    family_mu_predict[p] <- order.xi[order_pred[p]]*family.eta_pred[p]
+    family.eta_pred[p] ~ dnorm(0,order.prec)
+    
+    
+  }
+  
+    for(s in 1:NSPECIES){
     lmass[s] ~ dnorm(speciesmu[s],tau[s])
     # species mean drawn from family dist 
     speciesdev[s] <- speciesmu[s] - genusmu[genus[s]]
@@ -53,35 +75,25 @@ model{
   sigma.grand <- abs(grand.xi)/sqrt(grand.prec)
   
   # priors tax hierachy
-  species.scale ~ dgamma(0.001,0.001)
+  species.scale ~ dgamma(2,hc_scale)
   species.prec ~ dgamma(0.5,0.5)
   
-  family.scale  ~ dgamma(0.001,0.001)
+  family.scale  ~ dgamma(2,hc_scale)
   family.prec ~ dgamma(0.5,0.5)
+  family.xi_pred ~ dnorm(0,family.scale)
   
-  genus.scale  ~ dgamma(0.001,0.001)
+  genus.scale  ~ dgamma(2,hc_scale)
   genus.prec ~ dgamma(0.5,0.5)
+  genus.xi_pred ~ dnorm(0,genus.scale)
   
-  order.scale   ~ dgamma(0.001,0.001)
+  order.scale   ~ dgamma(2,hc_scale)
   order.prec ~ dgamma(0.5,0.5)
   
-  grand.xi ~ dnorm(0,0.0001)
+  grand.xi ~ dnorm(0,2/hc_scale)
   grand.prec ~ dgamma(0.5,0.5)
-  #sigma.grand <- abs(grand.xi)/sqrt(grand.prec) 
-  
-  #grandtau ~ dgamma(0.01,0.01)
+
   grandmu ~ dnorm(0,1e-6)
-  
-  
-#   # other rfx
-#   
-#   for (h in 1:CONTINENTS){
-#     continent_eff[h] <- cont.xi*cont.eta[h] 
-#     cont.eta[h] ~ dnorm(0,cont.prec)
-#   }
-#   
-#   cont.xi ~ dnorm(0,0.1)
-#   cont.prec ~ dgamma(0.5,0.5)
+  hc_scale ~ dunif(0.0001,10000)
   
   # finite population sds
   sd.sigma.family <- sd(sigma.family)
@@ -92,7 +104,5 @@ model{
   sd.species <- sd(speciesdev)
   sd.family  <- sd(familydev)
   sd.order   <- sd(ordermu)
-  # sd.continent_eff <- sd(continent_eff)
-  
-  #tau ~ dgamma(0.01,0.01)
-}
+ 
+  }

@@ -52,24 +52,24 @@ model{
   }
   
   # priors tax hierachy
-  genus.xi ~ dnorm(0,0.001)
+  genus.xi ~ dnorm(0,hc_scale)
   genus.prec ~ dgamma(0.5,0.5)
   sigma.species <- abs(genus.xi)/sqrt(genus.prec)
   
-  family.xi ~ dnorm(0,0.001)
+  family.xi ~ dnorm(0,hc_scale)
   family.prec ~ dgamma(0.5,0.5)
   sigma.genus <- abs(family.xi)/sqrt(family.prec)
 
-  order.xi ~ dnorm(0,0.001)
+  order.xi ~ dnorm(0,hc_scale)
   order.prec ~ dgamma(0.5,0.5)
   sigma.family <- abs(order.xi)/sqrt(order.prec)
   
-  grand.xi ~ dnorm(0,0.0001)
+  grand.xi ~ dnorm(0,hc_scale)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
   grandmu ~ dnorm(0,1e-6)
-  
+  hc_scale ~ dunif(0.0001,10000)
   
   #   # other rfx
   #   

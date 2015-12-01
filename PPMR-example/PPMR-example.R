@@ -104,7 +104,8 @@ PPMR_rfx_h <- jags.parallel(model.file = 'PPMR-model_rfx_rh.R',
                                                    'sd.sigma.ind',
                                                    'sd.ppmr',
                                                    'sd.geoareafx',
-                                                   'beta'))
+                                                   'beta',
+                                                   'hc_scale'))
 
 plot(as.mcmc(PPMR_rfx_h,subs='pred'))
 

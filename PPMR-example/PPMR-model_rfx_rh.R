@@ -74,22 +74,23 @@ model{
   # priors tax hierachy
   ind.prec ~ dgamma(0.5,0.5)
   
+  species.scale  ~ dgamma(2,hc_scale)
   species.prec ~ dgamma(0.5,0.5)
   species.xi_pred ~ dnorm(0,species.scale)
-  species.scale  ~ dgamma(5,0.5)
   
-  family.scale  ~ dgamma(5,0.5)
+  family.scale  ~ dgamma(2,hc_scale)
   family.prec ~ dgamma(0.5,0.5)
   family.xi_pred ~ dnorm(0,family.scale)
   
-  order.scale   ~ dgamma(5,0.5)
+  order.scale   ~ dgamma(2,hc_scale)
   order.prec ~ dgamma(0.5,0.5)
   
-  grand.xi ~ dnorm(0,10)
+  grand.xi ~ dnorm(0,2/hc_scale)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
-  grandmu ~ dnorm(-3.6,0.2)
+  grandmu ~ dnorm(-2.68,0.2)
+  hc_scale ~ dunif(0.0001,1000)
   
   # other rfx 
   geo.xi ~ dnorm(0,10)
