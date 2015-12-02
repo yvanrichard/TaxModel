@@ -75,7 +75,7 @@ model{
   sigma.order <- abs(grand.xi)/sqrt(grand.prec)
   
   grandmu ~ dnorm(0,1e-6)
-  hc_scale ~ dunif(0.0001,10000)
+  hc_scale ~ dunif(0.00001,100000)
   
   #   # other rfx
   #   

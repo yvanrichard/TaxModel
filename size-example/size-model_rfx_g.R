@@ -69,7 +69,7 @@ model{
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
   grandmu ~ dnorm(0,1e-6)
-  hc_scale ~ dunif(0.00001,100000)
+  hc_scale ~ dgamma(1e-9,1e-9)
   
   #   # other rfx
   #   

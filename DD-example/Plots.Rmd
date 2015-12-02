@@ -1,8 +1,8 @@
 ---
-title: "DD plots"
+  title: "DD plots"
 output: pdf_document
 ---
-
+  
 ```{r pre,echo=F,message=F,warning=F}
 
 knitr::opts_chunk$set(warning=F,message=F)
@@ -17,8 +17,11 @@ require("dplyr")
 load("DD_model_runs.Rdata")
 
 sds <- list()
-sds[[1]] <- DD_rfx$BUGSoutput$sims.list[grepl('sd',names(DD_rfx$BUGSoutput$sims.list))]
-sds[[2]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_h$BUGSoutput$sims.list)) & !grepl('sigma',names(DD_rfx_h$BUGSoutput$sims.list))]
+sds[[1]] <- DD_rfx_s$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_s$BUGSoutput$sims.list))]
+sds[[2]] <- DD_rfx_si$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_si$BUGSoutput$sims.list))]
+sds[[3]] <- DD_rfx_u$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_u$BUGSoutput$sims.list))]
+sds[[4]] <- DD_rfx_g$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_g$BUGSoutput$sims.list))]
+sds[[5]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_h$BUGSoutput$sims.list)) & !grepl('sigma',names(DD_rfx_h$BUGSoutput$sims.list))]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 ssd <- plyr::llply(sds,function(x) apply(as.data.frame(x),1,function(z) z/sum(z)))
@@ -33,20 +36,21 @@ msd <- msd %>%
             q11 = quantile(value,0.25),
             q33 = quantile(value,0.75),
             q3 = quantile(value,0.975))
-  
-msd$Factor <- rep(c('Family','Genus','Order','Population','Species'),2)
-msd$L1 <- rep(c('rfx','rfx_h'),each=5)
+
+msd$Factor <- rep(c('Family','Genus','Order','Population','Species'),5)
+msd$L1 <- rep(c('rfx vague','rfx informed','rfx h uniform','rfx h gamma','rfx h taxonomy'),each=5)
 colnames(msd)[1] <- 'model'
 
 msd$Factor <- factor(msd$Factor,levels = c('Population','Species','Genus','Family','Order'))
+msd$model <- factor(msd$model,levels = rev(c('rfx vague','rfx informed','rfx h uniform','rfx h gamma','rfx h taxonomy')))
 
 dw=0.75
 ggplot(msd) + 
-geom_point(aes(x=Factor, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
-geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=position_dodge(width=dw)) + 
-geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
-theme_classic() + 
-coord_flip() + 
+  geom_point(aes(x=Factor, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
+  theme_classic() + 
+  coord_flip() + 
   #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
   ylab('Proportion of variance')
 
@@ -55,8 +59,11 @@ coord_flip() +
 ```{r predictions, fig.cap="Prediction of degree days to development from taxonomic factors only, at each of four taxonomic levels. At each level, predictions are made under the assuption that the next lower taxonomic level for the species in question was not included in the analysis (e.g., at the family level, we assumed taht the genus for the prediction was not part of the analysis, and the genus mean had to be drawn from the posterior predictive distribution."}
 
 sds <- list()
-sds[[1]] <- DD_rfx$BUGSoutput$sims.list[grepl('pred',names(DD_rfx$BUGSoutput$sims.list))]
-sds[[2]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_h$BUGSoutput$sims.list))]
+sds[[1]] <- DD_rfx_s$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_s$BUGSoutput$sims.list))]
+sds[[2]] <- DD_rfx_si$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_si$BUGSoutput$sims.list))]
+sds[[3]] <- DD_rfx_u$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_u$BUGSoutput$sims.list))]
+sds[[4]] <- DD_rfx_g$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_g$BUGSoutput$sims.list))]
+sds[[5]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_h$BUGSoutput$sims.list))]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 msd <- reshape2::melt(sds)
@@ -69,26 +76,27 @@ msd <- msd %>%
             q11 = quantile(value,0.25),
             q33 = quantile(value,0.75),
             q3 = quantile(value,0.975))
-  
-msd$Factor <- rep(rep(c('Family','Genus','Order','Species'),each=50),2)
-msd$L1 <- rep(c('rfx','rfx_h'),each=200)
+
+msd$Factor <- rep(rep(c('Family','Genus','Order','Species'),each=50),5)
+msd$L1 <- rep(c('rfx vague','rfx informed','rfx h uniform','rfx h gamma','rfx h taxonomy'),each=200)
 colnames(msd)[1] <- 'model'
 
 msd$Factor <- factor(msd$Factor,levels = c('Species','Genus','Family','Order'))
-  msd$DD <- log10(DD$EADDC[pred])
+msd$model <- factor(msd$model,levels = rev(c('rfx vague','rfx informed','rfx h uniform','rfx h gamma','rfx h taxonomy')))
+msd$DD <- DD$BDT.C[pred]
 msd <- msd %>% group_by(model,Factor) %>% arrange(DD) %>% mutate(Var2 = 1:n())
 
-dw=2
+dw=5
 ggplot(msd) + 
-  facet_wrap(~Factor)+
-  geom_point(aes(x=Var2*3, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
- 
-  geom_linerange(aes(x=Var2*3, y=means,ymin=q1,ymax=q3,col=model),size=1, position=position_dodge(width=dw)) + 
-  geom_linerange(aes(x=Var2*3, y=means,ymin=q11,ymax=q33,col=model),size=2, position=position_dodge(width=dw)) + 
+  facet_wrap(Factor~model)+
+  geom_point(aes(x=Var2*10, y=means, col=model), size=4, position=position_dodge(width=dw)) + 
+  
+  geom_linerange(aes(x=Var2*10, y=means,ymin=q1,ymax=q3,col=model),size=1, position=position_dodge(width=dw)) + 
+  geom_linerange(aes(x=Var2*10, y=means,ymin=q11,ymax=q33,col=model),size=2, position=position_dodge(width=dw)) + 
   theme_classic()+
-   geom_point(aes(x=Var2*3, y=DD), size=4, position=position_dodge(width=dw)) +
+  geom_point(aes(x=Var2*10, y=DD), size=4, position=position_dodge(width=dw)) +
   #coord_flip() #+ 
-  xlab('Prediction') + 
-  ylab('Test point')
+  ylab('Prediction') + 
+  xlab('Test point')
 
 ```

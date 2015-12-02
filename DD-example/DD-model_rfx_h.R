@@ -71,22 +71,23 @@ model{
   # priors tax hierachy
   species.prec ~ dgamma(0.5,0.5)
   
-  family.scale  ~ dgamma(5,0.5)
+  family.scale  ~ dgamma(2,hc_scale)
   family.prec ~ dgamma(0.5,0.5)
   family.xi_pred ~ dnorm(0,family.scale)
   
-  genus.scale  ~ dgamma(5,0.5)
+  genus.scale  ~ dgamma(2,hc_scale)
   genus.prec ~ dgamma(0.5,0.5)
   genus.xi_pred ~ dnorm(0,genus.scale)
   
-  order.scale   ~ dgamma(5,0.5)
+  order.scale   ~ dgamma(2,hc_scale)
   order.prec ~ dgamma(0.5,0.5)
   
-  grand.xi ~ dnorm(0,10)
+  grand.xi ~ dnorm(0,2/hc_scale)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec)
   
   grandmu ~ dnorm(2.45,0.2)
+  hc_scale ~ dunif(0.00001,100000)
   
   # finite population sds
   sd.sigma.species <- sd(sigma.species)

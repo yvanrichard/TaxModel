@@ -2,9 +2,16 @@ model{
 
   for(p in 1:NPRED){
 
-    mu_pred_s[p] <- grandmu + speciesmu[pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    pred_s[p] ~ dnorm(mu_pred_s[p],tau)
+    mu_pred_s[p] <- grandmu + speciesmu[species_pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_g[p] ~ dnorm(mu_pred_g[p],tau)
     mu_pred_g[p] <- grandmu + species_predict[p] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_f[p] ~ dnorm(mu_pred_f[p],tau)
     mu_pred_f[p] <- grandmu + species_predict[p] + genus_predict[p] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    
+    pred_o[p] ~ dnorm(mu_pred_o[p],tau)
     mu_pred_o[p] <- grandmu + species_predict[p] + genus_predict[p] + family_predict[p] + ordermu[order_pred[p]]
     
     species_predict[p] <- genus.xi*species.eta_pred[p]
@@ -18,13 +25,16 @@ model{
     
   }
   
-  
-  for(s in 1:NSPECIES){
-    lmass[s] ~ dnorm(mu[s],tau[s])
-    mu[s] <- grandmu + speciesmu[s] + genusmu[genus[s]] + familymu[family[s]] + ordermu[order[s]]
+  for(i in 1:NOBS){
+    lDD[i] ~ dnorm(mu[i],tau)
+    mu[i] <- grandmu + speciesmu[species[i]] + genusmu[genus[i]] + familymu[family[i]] + ordermu[order[i]]
     
-    speciesmu[s] <- genus.xi*species.eta[s]
-    species.eta[s] ~ dnorm(0,genus.prec)
+  }
+  
+  for(i in 1:NSPECIES){
+    
+    speciesmu[i] <- genus.xi*species.eta[i]
+    species.eta[i] ~ dnorm(0,genus.prec)
     
   }
   
@@ -52,24 +62,24 @@ model{
   }
   
   # priors tax hierachy
-  genus.xi ~ dnorm(0,hc_scale)
+  genus.xi ~ dnorm(0,pscale)
   genus.prec ~ dgamma(0.5,0.5)
   sigma.species <- abs(genus.xi)/sqrt(genus.prec)
   
-  family.xi ~ dnorm(0,hc_scale)
+  family.xi ~ dnorm(0,pscale)
   family.prec ~ dgamma(0.5,0.5)
   sigma.genus <- abs(family.xi)/sqrt(family.prec)
 
-  order.xi ~ dnorm(0,hc_scale)
+  order.xi ~ dnorm(0,pscale)
   order.prec ~ dgamma(0.5,0.5)
   sigma.family <- abs(order.xi)/sqrt(order.prec)
   
-  grand.xi ~ dnorm(0,hc_scale)
+  grand.xi ~ dnorm(0,pscale)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
-  grandmu ~ dnorm(0,1e-6)
-  hc_scale ~ dunif(0.00001,100000)
+  grandmu ~ dnorm(2.45,0.2)
+  
   
   #   # other rfx
   #   
@@ -86,8 +96,9 @@ model{
   sd.species <- sd(speciesmu)
   sd.family  <- sd(familymu)
   sd.order   <- sd(ordermu)
+  sd.pop <- 1/sqrt(tau)
   # sd.continent_eff <- sd(continent_eff)
   
-  #tau ~ dgamma(0.001,0.001)
+  tau ~ dgamma(0.01,0.01)
   
 }

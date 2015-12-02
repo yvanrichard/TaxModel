@@ -64,27 +64,29 @@ model{
   }
   
   # priors tax hierachy
-  species.xi ~ dnorm(0,10)
+  species.xi ~ dnorm(0,hc_scale)
   species.prec ~ dgamma(0.5,0.5)
   sigma.ind <- abs(species.xi)/sqrt(species.prec)
   
-  family.xi ~ dnorm(0,10)
+  family.xi ~ dnorm(0,hc_scale)
   family.prec ~ dgamma(0.5,0.5)
   sigma.species <- abs(family.xi)/sqrt(family.prec)
 
-  order.xi ~ dnorm(0,10)
+  order.xi ~ dnorm(0,hc_scale)
   order.prec ~ dgamma(0.5,0.5)
   sigma.family <- abs(order.xi)/sqrt(order.prec)
   
-  grand.xi ~ dnorm(0,10)
+  grand.xi ~ dnorm(0,hc_scale)
   grand.prec ~ dgamma(0.5,0.5)
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
   grandmu ~ dnorm(-3.6,0.2)
   
   # other rfx 
-  geo.xi ~ dnorm(0,10)
+  geo.xi ~ dnorm(0,hc_scale)
   geo.prec ~ dgamma(0.5,0.5)
+  
+  hc_scale ~ dunif(0.0001,10000)
   
   for (d in 1:GEOAREAS){
     geoareafx[d] <- geo.xi*geo.eta[d] 

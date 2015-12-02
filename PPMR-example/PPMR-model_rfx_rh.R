@@ -90,7 +90,7 @@ model{
   sigma.order <- abs(grand.xi)/sqrt(grand.prec) 
   
   grandmu ~ dnorm(-2.68,0.2)
-  hc_scale ~ dunif(0.0001,1000)
+  hc_scale ~ dunif(0.0001,10000)
   
   # other rfx 
   geo.xi ~ dnorm(0,10)

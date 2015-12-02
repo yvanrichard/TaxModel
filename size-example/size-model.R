@@ -3,7 +3,7 @@ model{
   
   for(p in 1:NPRED){
     
-    mu_pred_s[p] <- speciesmu[p]
+    mu_pred_s[p] <- genusmu[genus_pred[p]] + genus.xi[genus_pred[p]]*species.eta[p]
     mu_pred_g[p] <- genusmu[genus_pred[p]] + genus.xi[genus_pred[p]]*species.eta_pred[p]
     mu_pred_f[p] <- genus_mu_predict[p] + genus.xi_pred*species.eta_pred[p]
     mu_pred_o[p] <- genus_mu_predict_u[p] + genus.xi_pred*species.eta_pred[p]
@@ -11,11 +11,11 @@ model{
     species_predict[p] <- genus.xi[genus_pred[p]]*species.eta_pred[p]
     species.eta_pred[p] ~ dnorm(0,genus.prec)
     
-    genus_mu_predict[p] <- familymu[family_pred[p]]+family.xi[family_pred[p]]*genus.eta[p]
+    genus_mu_predict[p] <- familymu[family_pred[p]]+family.xi[family_pred[p]]*genus.eta_pred[p]
     genus_mu_predict_u[p] <- family_mu_predict[p] + family.xi_pred*genus.eta_pred[p]
     genus.eta_pred[p] ~ dnorm(0,family.prec)
     
-    family_mu_predict[p] <- order.xi[order_pred[p]]*family.eta_pred[p]
+    family_mu_predict[p] <- ordermu[order_pred[p]] + order.xi[order_pred[p]]*family.eta_pred[p]
     family.eta_pred[p] ~ dnorm(0,order.prec)
     
     
@@ -93,7 +93,7 @@ model{
   grand.prec ~ dgamma(0.5,0.5)
 
   grandmu ~ dnorm(0,1e-6)
-  hc_scale ~ dunif(0.0001,10000)
+  hc_scale ~ dunif(0.00001,100000)
   
   # finite population sds
   sd.sigma.family <- sd(sigma.family)

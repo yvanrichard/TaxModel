@@ -49,9 +49,11 @@ jagsdata <- list(pred =pred ,
 
 require(R2jags)
 
+
+# hierarchical tree model
 JM <- jags.parallel(model.file = 'size-model.R',
-                    n.iter = 12500,
-                    n.burnin = 2500,
+                    n.iter = 25000,
+                    n.burnin = 5000,
                     DIC = T,
                     n.thin = 5,
                     data=jagsdata,
@@ -76,6 +78,7 @@ JM <- jags.parallel(model.file = 'size-model.R',
 #JM
 # traceplot(JM)
 
+
 jagsdata_rfx_h <- list(lmass = sizes$lmass,
                        pred =pred ,
                        NPRED = lpred,
@@ -94,41 +97,10 @@ jagsdata_rfx_h <- list(lmass = sizes$lmass,
                        
 )
 
-require(R2jags)
-
-JM_rfx_h <- jags.parallel(model.file = 'size-model_rfx_h.R',
-                          n.iter = 12500,
-                          n.burnin = 2500,
-                          DIC = T,
-                          n.thin = 5,
-                          data=jagsdata_rfx_h,
-                          n.chains = 1,
-                          parameters.to.save = c('sd.species',
-                                                 'sd.genus',
-                                                 'sd.family',
-                                                 'sd.order',
-                                                 'genus.scale',
-                                                 'family.scale',
-                                                 'order.scale',
-                                                 'grandmu',
-                                                 'grand.xi',
-                                                 'mu_pred_g',
-                                                 'mu_pred_f',
-                                                 'mu_pred_o',
-                                                 'mu_pred_s',
-                                                 'sd.sigma.species',
-                                                 'sd.sigma.genus',
-                                                 'sd.sigma.family',
-                                                 'hc_scale'))
-
-
-
-# JM_rfx_h
-# traceplot(JM_rfx_h)
-
-JM_rfx <- jags.parallel(model.file = 'size-model_rfx.R',
-                        n.iter = 12500,
-                        n.burnin = 2500,
+# hierarchical non-tree model - uniform prior on scale
+JM_rfx_u <- jags.parallel(model.file = 'size-model_rfx_u.R',
+                        n.iter = 25000,
+                        n.burnin = 5000,
                         DIC = T,
                         n.thin = 5,
                         data=jagsdata_rfx_h,
@@ -152,7 +124,111 @@ JM_rfx <- jags.parallel(model.file = 'size-model_rfx.R',
                                                'sigma.order',
                                                'hc_scale'))
 
+# hierarchical non-tree model - gamma prior on scale
+JM_rfx_g <- jags.parallel(model.file = 'size-model_rfx_g.R',
+                          n.iter = 25000,
+                          n.burnin = 5000,
+                          DIC = T,
+                          n.thin = 5,
+                          data=jagsdata_rfx_h,
+                          n.chains = 3,
+                          parameters.to.save = c('sd.species',
+                                                 'sd.genus',
+                                                 'sd.family',
+                                                 'sd.order',
+                                                 'genus.scale',
+                                                 'family.scale',
+                                                 'order.scale',
+                                                 'grandmu',
+                                                 'grand.xi',
+                                                 'mu_pred_g',
+                                                 'mu_pred_f',
+                                                 'mu_pred_o',
+                                                 'mu_pred_s',
+                                                 'sigma.species',
+                                                 'sigma.genus',
+                                                 'sigma.family',
+                                                 'sigma.order',
+                                                 'hc_scale'))
+
+# hierarchical non-tree model; cut off hierarchy
+JM_rfx_s <- jags.parallel(model.file = 'size-model_rfx_s.R',
+                        n.iter = 25000,
+                        n.burnin = 5000,
+                        DIC = T,
+                        n.thin = 5,
+                        data=jagsdata_rfx_h,
+                        n.chains = 3,
+                        parameters.to.save = c('sd.species',
+                                               'sd.genus',
+                                               'sd.family',
+                                               'sd.order',
+                                               'genus.scale',
+                                               'family.scale',
+                                               'order.scale',
+                                               'grandmu',
+                                               'grand.xi',
+                                               'mu_pred_g',
+                                               'mu_pred_f',
+                                               'mu_pred_o',
+                                               'mu_pred_s',
+                                               'sigma.species',
+                                               'sigma.genus',
+                                               'sigma.family',
+                                               'sigma.order'))
 
 
 # JM_rfx
 # traceplot(JM_rfx)
+
+# hierarchical tree model in linear form - uniform prior on scale
+JM_rfx_h <- jags.parallel(model.file = 'size-model_rfx_h.R',
+                          n.iter = 25000,
+                          n.burnin = 25000,
+                          DIC = T,
+                          n.thin = 5,
+                          data=jagsdata_rfx_h,
+                          n.chains = 3,
+                          parameters.to.save = c('sd.species',
+                                                 'sd.genus',
+                                                 'sd.family',
+                                                 'sd.order',
+                                                 'genus.scale',
+                                                 'family.scale',
+                                                 'order.scale',
+                                                 'grandmu',
+                                                 'grand.xi',
+                                                 'mu_pred_g',
+                                                 'mu_pred_f',
+                                                 'mu_pred_o',
+                                                 'mu_pred_s',
+                                                 'sd.sigma.species',
+                                                 'sd.sigma.genus',
+                                                 'sd.sigma.family',
+                                                 'hc_scale'))
+
+
+
+# JM_rfx_h
+# traceplot(JM_rfx_h)
+
+as.mcmc.rjags <- function (x, subs=NULL, ...) 
+{
+  x <- x$BUGSoutput
+  mclist <- vector("list", x$n.chains)
+  mclis <- vector("list", x$n.chains)
+  strt <- x$n.burnin + 1
+  end <- x$n.iter
+  if (is.null(subs)) {
+    ord <- order(dimnames(x$sims.array)[[3]])
+  } else {
+    ord <- which(!grepl(subs,dimnames(x$sims.array)[[3]]))
+  }
+  for (i in 1:x$n.chains) {
+    tmp1 <- x$sims.array[, i, ord]
+    mclis[[i]] <- mcmc(tmp1, start = strt, end = end, thin = x$n.thin)
+  }
+  as.mcmc.list(mclis)
+}
+
+save.image("size_model_runs.Rdata")

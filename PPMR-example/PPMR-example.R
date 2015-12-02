@@ -54,7 +54,7 @@ PPMR_rfx <- jags.parallel(model.file = 'PPMR-model_rfx_r.R',
                         n.iter = 250000,
                         n.burnin = 50000,
                         DIC = T,
-                        n.thin = 20,
+                        n.thin = 100,
                         data=PPMRdata_rfx_h,
                         n.chains = 3,
                         parameters.to.save = c('sd.species',
@@ -72,7 +72,8 @@ PPMR_rfx <- jags.parallel(model.file = 'PPMR-model_rfx_r.R',
                                                'sd.ind',
                                                'sd.ppmr',
                                                'sd.geoareafx',
-                                               'beta'))
+                                               'beta',
+                                               'hc_scale'))
 
 
 
@@ -80,10 +81,10 @@ PPMR_rfx <- jags.parallel(model.file = 'PPMR-model_rfx_r.R',
 #traceplot(DD_rfx)
 
 PPMR_rfx_h <- jags.parallel(model.file = 'PPMR-model_rfx_rh.R',
-                            n.iter = 50000,
-                            n.burnin = 10000,
+                            n.iter = 250000,
+                            n.burnin = 50000,
                             DIC = T,
-                            n.thin = 20,
+                            n.thin = 100,
                             data=PPMRdata_rfx_h,
                             n.chains = 3,
                             parameters.to.save = c('sd.species',
@@ -107,8 +108,6 @@ PPMR_rfx_h <- jags.parallel(model.file = 'PPMR-model_rfx_rh.R',
                                                    'beta',
                                                    'hc_scale'))
 
-plot(as.mcmc(PPMR_rfx_h,subs='pred'))
-
 
 as.mcmc.rjags <- function (x, subs=NULL, ...) 
 {
@@ -129,6 +128,7 @@ as.mcmc.rjags <- function (x, subs=NULL, ...)
   as.mcmc.list(mclis)
 }
 
+plot(as.mcmc(PPMR_rfx_h,subs='pred'))
 crosscorr(as.mcmc(PPMR_rfx_h,subs='pred'))
 
 #DD_rfx_h

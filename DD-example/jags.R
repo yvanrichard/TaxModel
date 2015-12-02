@@ -128,7 +128,7 @@ jags <- function (data, inits, parameters.to.save, model.file = "model.bug",
   samples <- rjags::coda.samples(model = m, variable.names = parameters.to.save, 
                           n.iter = (n.iter - n.burnin), thin = n.thin, by = refresh, 
                           progress.bar = progress.bar)
-  fit <- R2jags::mcmc2bugs(samples, model.file = model.file, program = "jags", 
+  fit <- R2jags:::mcmc2bugs(samples, model.file = model.file, program = "jags", 
                    DIC = DIC, DICOutput = NULL, n.iter = n.iter, n.burnin = n.burnin, 
                    n.thin = n.thin)
   out <- list(model = m, BUGSoutput = fit, parameters.to.save = parameters.to.save, 
@@ -201,14 +201,14 @@ jags.parallel <- function (data, inits, parameters.to.save, model.file = "model.
   result <- NULL
   model <- NULL
   for (ch in 1:n.chains) {
-    result <- abind(result, res[[ch]]$BUGSoutput$sims.array, 
+    result <- abind::abind(result, res[[ch]]$BUGSoutput$sims.array, 
                     along = 2)
     model[[ch]] <- res[[ch]]$model
   }
   if (is.function(model.file)) {
     model.file <- substitute(model.file)
   }
-  result <- as.bugs.array2(result, model.file = model.file, 
+  result <- R2jags:::as.bugs.array2(result, model.file = model.file, 
                            program = "jags", DIC = DIC, n.iter = n.iter, n.burnin = n.burnin, 
                            n.thin = n.thin)
   out <- list(model = model, BUGSoutput = result, parameters.to.save = parameters.to.save, 
