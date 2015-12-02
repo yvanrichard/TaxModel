@@ -1,8 +1,8 @@
 ---
-  title: "DD plots"
+title: "DD plots"
 output: pdf_document
 ---
-  
+
 ```{r pre,echo=F,message=F,warning=F}
 
 knitr::opts_chunk$set(warning=F,message=F)

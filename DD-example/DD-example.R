@@ -212,4 +212,4 @@ as.mcmc.rjags <- function (x, subs=NULL,offs=100, ...)
 
 plot(as.mcmc(DD_rfx_g,subs='pred'))
 
-save(DD,pred,DD_rfx,DD_rfx_h,file='DD_model_runs.Rdata')
+save(DD,pred,DD_rfx_s,DD_rfx_si,DD_rfx_g,DD_rfx_u,DD_rfx_h,file='DD_model_runs.Rdata')
