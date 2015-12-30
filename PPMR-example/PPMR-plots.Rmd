@@ -1,39 +1,74 @@
 ---
 title: "size plots"
-output: pdf_document
+output:
+  pdf_document:
+        includes:
+            in_header: header.tex 
 ---
 
-```{r tax sd}
+```{r pre,echo=F,message=F,warning=F}
 
-load("tax_model_runs.Rdata")
+knitr::opts_chunk$set(warning=F,message=F,echo=F)
+require("ggplot2")
+require("dplyr")
+
+```
+
+
+```{r table}
+
+load("PPMR.model.runs.Rdata")
+
+PPMR.model.list <- list(`rfx h uniform` = PPMR_rfx,
+                      `rfx h taxonomy` = PPMR_rfx_h)
+
+tab <- lapply(PPMR.model.list,function(x)
+  data.frame(deviance = mean(x$BUGSoutput$sims.list$deviance),
+             pD = x$BUGSoutput$pD,
+             DIC = x$BUGSoutput$DIC)
+)
+
+tab <- do.call('rbind',tab)
+tab$model <- rownames(tab)
+tab <- tab[,c(4,1:3)]
+
+knitr::kable(tab,
+             row.names=F,
+             digits=0,
+             align=c('l','r','r','r')) 
+
+```
+
+
+```{r tax sd, fig.cap="Proportion of variance attributed to each taxonomic level in the analysis."}
 
 sds <- list()
-sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[1800:3000,,grepl('sd',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
-sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[1800:3000,,grepl('sd',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]]) & !grepl('sigma',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
+sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[,,grepl('sd',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
+sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[,,grepl('sd',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]]) & !grepl('sigma',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 ssd <- plyr::llply(sds,function(x) {
-  n=dimnames(x)[[3]]
-  dim(x) <- c(dim(x)[1]*dim(x)[2],dim(x)[3])
-  colnames(x) <- n
-  apply(as.data.frame(x),1,function(z) z/sum(z))})
+n=dimnames(x)[[3]]
+dim(x) <- c(dim(x)[1]*dim(x)[2],dim(x)[3])
+colnames(x) <- n
+apply(as.data.frame(x),1,function(z) z/sum(z))})
 
 msd <- reshape2::melt(ssd)
 
 msd <- msd %>% 
-  mutate(Factor = do.call('rbind',strsplit(as.character(Var1),'sd.'))[,2]) %>%
-  group_by(L1,Factor) %>%
-  summarise(means = median(value),
-            q1 = quantile(value,0.025),
-            q11 = quantile(value,0.25),
-            q33 = quantile(value,0.75),
-            q3 = quantile(value,0.975))
-  
-msd$Factor <- rep(c('Class','Family','Individual','Order','PPMR','Species'),2)
-msd$L1 <- rep(c('rfx','rfx_h'),each=6)
+mutate(Factor = do.call('rbind',strsplit(as.character(Var1),'sd.'))[,2]) %>%
+group_by(L1,Factor) %>%
+summarise(means = median(value),
+          q1 = quantile(value,0.025),
+          q11 = quantile(value,0.25),
+          q33 = quantile(value,0.75),
+          q3 = quantile(value,0.975))
+
+msd$Factor <- rep(c('Family','Individual','Order','PPMR','Species'),2)
+msd$L1 <- rep(c('rfx','rfx_h'),each=5)
 colnames(msd)[1] <- 'model'
 
-msd$Factor <- factor(msd$Factor,levels = c('PPMR','Individual','Species','Family','Order','Class'))
+msd$Factor <- factor(msd$Factor,levels = c('PPMR','Individual','Species','Family','Order'))
 
 dw=0.75
 ggplot(msd) + 
@@ -42,17 +77,19 @@ geom_linerange(aes(x=Factor, y=means,ymin=q1,ymax=q3,col=model),size=1,position=
 geom_linerange(aes(x=Factor, y=means,ymin=q11,ymax=q33,col=model),size=2,position=position_dodge(width=dw)) + 
 theme_classic() + 
 coord_flip() #+ 
-  
+
 #ylab(expression(Finite~population~variance~(log[10]~PPMR))) + 
   #xlab('Effect')
 
 ```
 
-```{r tax sd}
+\newpage
+\blandscape
+```{r predictions, fig.cap="Prediction of log10 predator prey mass ratios, at each of four taxonomic levels. At each level, predictions are made under the assuption that the next lower taxonomic level for the species in question was not included in the analysis (e.g., for prediction at the family level, we assumed that the genus for the prediction was not part of the analysis, and the genus mean had to be drawn from the posterior predictive distribution at the family level.",fig.width=14,fig.height=9}
 
 sds <- list()
-sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[1800:3000,,grepl('pred',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
-sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[1800:3000,,grepl('pred',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
+sds[[1]] <- PPMR_rfx$BUGSoutput$sims.array[,,grepl('pred',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
+sds[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[,,grepl('pred',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 ssd <- plyr::llply(sds,function(x) {
@@ -68,17 +105,17 @@ msd <- msd %>%
   mutate(Factor = Var2) %>%
   group_by(L1,Factor) %>%
   summarise(means = median(value),
-            q1 = quantile(value,0.025),
+            q1 = quantile(value,0.05),
             q11 = quantile(value,0.25),
             q33 = quantile(value,0.75),
-            q3 = quantile(value,0.975))
+            q3 = quantile(value,0.95))
   
 msd$Factor <- rep(rep(c('Family','Ind','Order','Species'),each=50),2)
 msd$L1 <- rep(c('rfx','rfx_h'),each=200)
 colnames(msd)[1] <- 'model'
 
 msd$Factor <- factor(msd$Factor,levels = c('Ind','Species','Family','Order'))
-  msd$PPMR <- log10(ppmr.data$Predator.mass/ppmr.data$Prey.mass)[pred]
+  msd$PPMR <- log10(ppmr.best$Predator.mass/ppmr.best$Prey.mass)[PPMRdata_rfx_h$pred]
 msd <- msd %>% group_by(model,Factor) %>% arrange(PPMR) %>% mutate(Var2 = 1:n())
 
 dw=2
@@ -95,3 +132,5 @@ ggplot(msd) +
   #xlab('Effect')
 
 ```
+
+\elandscape

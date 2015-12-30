@@ -25,7 +25,7 @@ ppmr.data <- ppmr.data %>% mutate(log_ten_Pred = log10(Predator.mass))
 lpred <- 50
 pred = sample.int(n = length(ppmr.data$log_ten_Pred),lpred)
 PPMRdata_rfx_h <- list(log10Pmass = ppmr.data$log_ten_Pred,
-                     log10PPMR = log10(ppmr.data$Prey.mass),
+                     log10PPMR = log10(ppmr.data$Predator.mass/ppmr.data$Prey.mass),
                      geoarea = nidx(ppmr.data$Geographic.location),
                      pred =pred ,
                      NOBS = nrow(ppmr.data),
@@ -49,6 +49,7 @@ PPMRdata_rfx_h <- list(log10Pmass = ppmr.data$log_ten_Pred,
 )
 
 require(R2jags)
+source('jags.R')
 
 PPMR_rfx <- jags.parallel(model.file = 'PPMR-model_rfx_r.R',
                         n.iter = 250000,
@@ -56,7 +57,7 @@ PPMR_rfx <- jags.parallel(model.file = 'PPMR-model_rfx_r.R',
                         DIC = T,
                         n.thin = 100,
                         data=PPMRdata_rfx_h,
-                        n.chains = 3,
+                        n.chains = 2,
                         parameters.to.save = c('sd.species',
                                                'sd.family',
                                                'sd.order',
@@ -86,7 +87,7 @@ PPMR_rfx_h <- jags.parallel(model.file = 'PPMR-model_rfx_rh.R',
                             DIC = T,
                             n.thin = 100,
                             data=PPMRdata_rfx_h,
-                            n.chains = 3,
+                            n.chains = 2,
                             parameters.to.save = c('sd.species',
                                                    'sd.ind',
                                                    'sd.family',
@@ -130,6 +131,8 @@ as.mcmc.rjags <- function (x, subs=NULL, ...)
 
 plot(as.mcmc(PPMR_rfx_h,subs='pred'))
 crosscorr(as.mcmc(PPMR_rfx_h,subs='pred'))
+
+save(PPMR_rfx,PPMR_rfx_h,PPMRdata_rfx_h,ppmr.best,file='PPMR.model.runs.Rdata')
 
 #DD_rfx_h
 #traceplot(DD_rfx_h)

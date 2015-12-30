@@ -3,16 +3,16 @@ model{
   for(p in 1:NPRED){
 
     pred_s[p] ~ dnorm(mu_pred_s[p],tau)
-    mu_pred_s[p] <- grandmu + speciesmu[species_pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    mu_pred_s[p] <- grandmu + beta*cov[p] + speciesmu[species_pred[p]] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     
     pred_g[p] ~ dnorm(mu_pred_g[p],tau)
-    mu_pred_g[p] <- grandmu + species_predict[p] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    mu_pred_g[p] <- grandmu + beta*cov[p] + species_predict[p] + genusmu[genus_pred[p]] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     
     pred_f[p] ~ dnorm(mu_pred_f[p],tau)
-    mu_pred_f[p] <- grandmu + species_predict[p] + genus_predict[p] + familymu[family_pred[p]] + ordermu[order_pred[p]]
+    mu_pred_f[p] <- grandmu + beta*cov[p] + species_predict[p] + genus_predict[p] + familymu[family_pred[p]] + ordermu[order_pred[p]]
     
     pred_o[p] ~ dnorm(mu_pred_o[p],tau)
-    mu_pred_o[p] <- grandmu + species_predict[p] + genus_predict[p] + family_predict[p] + ordermu[order_pred[p]]
+    mu_pred_o[p] <- grandmu + beta*cov[p] + species_predict[p] + genus_predict[p] + family_predict[p] + ordermu[order_pred[p]]
     
     species_predict[p] <- genus.xi*species.eta_pred[p]
     species.eta_pred[p] ~ dnorm(0,genus.prec)
@@ -27,9 +27,11 @@ model{
   
   for(i in 1:NOBS){
     lDD[i] ~ dnorm(mu[i],tau)
-    mu[i] <- grandmu + speciesmu[species[i]] + genusmu[genus[i]] + familymu[family[i]] + ordermu[order[i]]
+    mu[i] <- grandmu + beta*cov[i]+ speciesmu[species[i]] + genusmu[genus[i]] + familymu[family[i]] + ordermu[order[i]]
     
   }
+  
+  beta ~ dnorm(0,1e-9)
   
   for(i in 1:NSPECIES){
     

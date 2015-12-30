@@ -8,6 +8,7 @@ DD<- DD[-c(522,1003,1555),]
 n <- function(x) length(unique(x))
 nidx <- function(x) as.numeric(factor(x,levels=unique(x)))
 
+require(INLA)
 summary(inla(log10(EADDC)~BDT.C + f(Order,model='iid')+f(as.numeric(Species),model='iid'),data=DD,control.compute=list(dic=TRUE)))
 
 SPECIES = nidx(DD$Species)
@@ -23,15 +24,13 @@ FAM <- nidx(DD$Family)
 # match unique family to order
 ORD <- nidx(DD$Order)
 
-
+stdise <- function(x) (x-mean(x))/sd(x)
 lpred <- 50
-pred = sample.int(n = length(DD$BDT.C),lpred)
-DDdata <- list(
-               lDD = (DD$BDT.C),
+pred = sample.int(n = length(DD$EADDC),lpred)
+DDdata <- list(lDD = log10(DD$EADDC),
+               cov= stdise(DD$BDT.C),
                pred =pred ,
                NOBS = nrow(DD),
-               cov=rep(1, NOBS),
-               beta=1,
                NPRED = lpred,
                NSPECIES = n(DD$Species),
                NGENUS = n(DD$Genus),
@@ -53,7 +52,7 @@ source('jags.R')
 #DD_rfx_h
 #traceplot(DD_rfx_h)
 DDdata$pscale <- 1e-9
-DD_rfx_s <- jags.parallel(model.file = 'DD-model_rfx_s.R',
+DD_rfx_rs <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                           n.iter = 35000,
                           n.burnin = 5000,
                           DIC = T,
@@ -77,10 +76,11 @@ DD_rfx_s <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                                                  'sigma.genus',
                                                  'sigma.family',
                                                  'sigma.order',
-                                                 'sd.pop'))
+                                                 'sd.pop',
+                                                 'beta'))
 
 DDdata$pscale <- 10
-DD_rfx_si <- jags.parallel(model.file = 'DD-model_rfx_s.R',
+DD_rfx_rsi <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                            n.iter = 35000,
                            n.burnin = 5000,
                            DIC = T,
@@ -104,10 +104,11 @@ DD_rfx_si <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                                                   'sigma.genus',
                                                   'sigma.family',
                                                   'sigma.order',
-                                                  'sd.pop'))
+                                                  'sd.pop',
+                                                  'beta'))
 
 
-DD_rfx_u <- jags.parallel(model.file = 'DD-model_rfx_u.R',
+DD_rfx_ru <- jags.parallel(model.file = 'DD-model_rfx_u.R',
                           n.iter = 35000,
                           n.burnin = 5000,
                           DIC = T,
@@ -132,10 +133,11 @@ DD_rfx_u <- jags.parallel(model.file = 'DD-model_rfx_u.R',
                                                  'sigma.family',
                                                  'sigma.order',
                                                  'sd.pop',
-                                                 'hc_scale'))
+                                                 'hc_scale',
+                                                 'beta'))
 
 
-DD_rfx_g <- jags.parallel(model.file = 'DD-model_rfx_g.R',
+DD_rfx_rg <- jags.parallel(model.file = 'DD-model_rfx_g.R',
                           n.iter = 35000,
                           n.burnin = 5000,
                           DIC = T,
@@ -160,7 +162,8 @@ DD_rfx_g <- jags.parallel(model.file = 'DD-model_rfx_g.R',
                                                  'sigma.family',
                                                  'sigma.order',
                                                  'sd.pop',
-                                                 'hc_scale'))
+                                                 'hc_scale',
+                                                 'beta'))
 
 
 
@@ -168,7 +171,7 @@ DD_rfx_g <- jags.parallel(model.file = 'DD-model_rfx_g.R',
 #traceplot(DD_rfx)
 
 
-DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
+DD_rfx_rh <- jags.parallel(model.file = 'DD-model_rfx_h.R',
                           n.iter = 35000,
                           n.burnin = 5000,
                           DIC = T,
@@ -192,8 +195,8 @@ DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
                                                  'sd.sigma.genus',
                                                  'sd.sigma.family',
                                                  'sd.pop',
-                                                 'hc_scale'
-                          ))
+                                                 'hc_scale',
+                                                 'beta'))
 
 as.mcmc.rjags <- function (x, subs=NULL,offs=100, ...) 
 {
@@ -214,6 +217,6 @@ as.mcmc.rjags <- function (x, subs=NULL,offs=100, ...)
   as.mcmc.list(mclis)
 }
 
-plot(as.mcmc(DD_rfx_g,subs='pred'))
+plot(as.mcmc(DD_rfx_rg,subs='pred'))
 
-save(DD,pred,DD_rfx_s,DD_rfx_si,DD_rfx_g,DD_rfx_u,DD_rfx_h,file='DD_model_runs.Rdata')
+save(DD,pred,DD_rfx_rs,DD_rfx_rsi,DD_rfx_rg,DD_rfx_ru,DD_rfx_rh,file='DD_model_r_runs.Rdata')

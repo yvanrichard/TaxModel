@@ -1,5 +1,5 @@
 ---
-title: "DD plots"
+title: "DD regression plots"
 output:
   pdf_document:
         includes:
@@ -16,27 +16,29 @@ require("dplyr")
 
 ```{r table}
 
-load("DD_model_runs.Rdata")
+load("DD_model_r_runs.Rdata")
 
-DD.model.list <- list(`rfx vague` = DD_rfx_s,
-                      `rfx informed` = DD_rfx_si,
-                      `rfx h uniform` = DD_rfx_u,
-                      `rfx h gamma` = DD_rfx_g,
-                      `rfx h taxonomy` = DD_rfx_h)
+DD.model.list <- list(`rfx vague` = DD_rfx_rs,
+                      `rfx informed` = DD_rfx_rsi,
+                      `rfx h uniform` = DD_rfx_ru,
+                      `rfx h gamma` = DD_rfx_rg,
+                      `rfx h taxonomy` = DD_rfx_rh)
 
 tab <- lapply(DD.model.list,function(x)
-  data.frame(deviance = mean(x$BUGSoutput$sims.list$deviance),
+  data.frame(`$\beta$` = mean(x$BUGSoutput$sims.list$beta),
+             `$sd(\beta)$` = sd(x$BUGSoutput$sims.list$beta),
+             deviance = mean(x$BUGSoutput$sims.list$deviance),
              pD = x$BUGSoutput$pD,
              DIC = x$BUGSoutput$DIC)
 )
 
 tab <- do.call('rbind',tab)
 tab$model <- rownames(tab)
-tab <- tab[,c(4,1:3)]
+tab <- tab[,c(6,1:5)]
 
 knitr::kable(tab,
              row.names=F,
-             digits=0,
+             digits=c(0,3,3,0,0,0),
              align=c('l','r','r','r')) 
 
 ```
@@ -45,11 +47,11 @@ knitr::kable(tab,
 
 
 sds <- list()
-sds[[1]] <- DD_rfx_s$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_s$BUGSoutput$sims.list))]
-sds[[2]] <- DD_rfx_si$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_si$BUGSoutput$sims.list))]
-sds[[3]] <- DD_rfx_u$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_u$BUGSoutput$sims.list))]
-sds[[4]] <- DD_rfx_g$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_g$BUGSoutput$sims.list))]
-sds[[5]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_h$BUGSoutput$sims.list)) & !grepl('sigma',names(DD_rfx_h$BUGSoutput$sims.list))]
+sds[[1]] <- DD_rfx_rs$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_rs$BUGSoutput$sims.list))]
+sds[[2]] <- DD_rfx_rsi$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_rsi$BUGSoutput$sims.list))]
+sds[[3]] <- DD_rfx_ru$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_ru$BUGSoutput$sims.list))]
+sds[[4]] <- DD_rfx_rg$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_rg$BUGSoutput$sims.list))]
+sds[[5]] <- DD_rfx_rh$BUGSoutput$sims.list[grepl('sd',names(DD_rfx_rh$BUGSoutput$sims.list)) & !grepl('sigma',names(DD_rfx_rh$BUGSoutput$sims.list))]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 ssd <- plyr::llply(sds,function(x) apply(as.data.frame(x),1,function(z) z/sum(z)))
@@ -87,11 +89,11 @@ ggplot(msd) +
 ```{r pred plot prep}
 
 sds <- list()
-sds[[1]] <- DD_rfx_s$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_s$BUGSoutput$sims.list))]
-sds[[2]] <- DD_rfx_si$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_si$BUGSoutput$sims.list))]
-sds[[3]] <- DD_rfx_u$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_u$BUGSoutput$sims.list))]
-sds[[4]] <- DD_rfx_g$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_g$BUGSoutput$sims.list))]
-sds[[5]] <- DD_rfx_h$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_h$BUGSoutput$sims.list))]
+sds[[1]] <- DD_rfx_rs$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_rs$BUGSoutput$sims.list))]
+sds[[2]] <- DD_rfx_rsi$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_rsi$BUGSoutput$sims.list))]
+sds[[3]] <- DD_rfx_ru$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_ru$BUGSoutput$sims.list))]
+sds[[4]] <- DD_rfx_rg$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_rg$BUGSoutput$sims.list))]
+sds[[5]] <- DD_rfx_rh$BUGSoutput$sims.list[grepl('pred',names(DD_rfx_rh$BUGSoutput$sims.list))]
 #sds[[3]] <- JM$BUGSoutput$sims.list[grepl('sd',names(JM$BUGSoutput$sims.list))]
 
 msd <- reshape2::melt(sds)
@@ -111,7 +113,7 @@ colnames(msd)[1] <- 'model'
 
 msd$Factor <- factor(msd$Factor,levels = c('Species','Genus','Family','Order'))
 msd$model <- factor(msd$model,levels = rev(c('rfx vague','rfx informed','rfx h uniform','rfx h gamma','rfx h taxonomy')))
-msd$DD <- DD$BDT.C[pred]
+msd$DD <- log10(DD$EADDC[pred])
 msd <- msd %>% group_by(model,Factor) %>% arrange(DD) %>% mutate(Var2 = 1:n())
 
 ```
