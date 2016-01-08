@@ -2,10 +2,13 @@ model{
 
   
   for(p in 1:NPRED){
-    
+    pred_s[p] ~  dnorm(mu_pred_s[p],tau[p])
     mu_pred_s[p] <- genusmu[genus_pred[p]] + genus.xi[genus_pred[p]]*species.eta[p]
+    pred_g[p] ~  dnorm(mu_pred_g[p],tau[p])
     mu_pred_g[p] <- genusmu[genus_pred[p]] + genus.xi[genus_pred[p]]*species.eta_pred[p]
+    pred_f[p] ~  dnorm(mu_pred_f[p],tau[p])
     mu_pred_f[p] <- genus_mu_predict[p] + genus.xi_pred*species.eta_pred[p]
+    pred_o[p] ~  dnorm(mu_pred_o[p],tau[p])
     mu_pred_o[p] <- genus_mu_predict_u[p] + genus.xi_pred*species.eta_pred[p]
     
     species_predict[p] <- genus.xi[genus_pred[p]]*species.eta_pred[p]

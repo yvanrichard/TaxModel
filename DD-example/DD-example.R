@@ -1,5 +1,9 @@
 require(dplyr)
 
+
+
+
+
 DD <- read.csv("DD.csv")
 
 DD <- DD %>% filter(!is.na(EADDC) & !is.na(BDT.C))
@@ -17,7 +21,7 @@ SPECIES = nidx(DD$Species)
 
 GE <- nidx(DD$Genus)
 
-# match unique species to family 
+# match unique species to family
 FAM <- nidx(DD$Family)
 
 # match unique family to order
@@ -71,6 +75,7 @@ DD_rfx_s <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                                                  'grand.xi',
                                                  'pred_g',
                                                  'pred_f',
+                                                 'mu',
                                                  'pred_o',
                                                  'pred_s',
                                                  'sigma.species',
@@ -100,6 +105,7 @@ DD_rfx_si <- jags.parallel(model.file = 'DD-model_rfx_s.R',
                                                   'pred_f',
                                                   'pred_o',
                                                   'pred_s',
+                                                  'mu',
                                                   'sigma.species',
                                                   'sigma.genus',
                                                   'sigma.family',
@@ -123,6 +129,7 @@ DD_rfx_u <- jags.parallel(model.file = 'DD-model_rfx_u.R',
                                                  'order.scale',
                                                  'grandmu',
                                                  'grand.xi',
+                                                 'mu',
                                                  'pred_g',
                                                  'pred_f',
                                                  'pred_o',
@@ -155,6 +162,7 @@ DD_rfx_g <- jags.parallel(model.file = 'DD-model_rfx_g.R',
                                                  'pred_f',
                                                  'pred_o',
                                                  'pred_s',
+                                                 'mu',
                                                  'sigma.species',
                                                  'sigma.genus',
                                                  'sigma.family',
@@ -179,6 +187,7 @@ DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
                                                  'sd.genus',
                                                  'sd.family',
                                                  'sd.order',
+                                                 'mu',
                                                  'genus.scale',
                                                  'family.scale',
                                                  'order.scale',
@@ -195,7 +204,7 @@ DD_rfx_h <- jags.parallel(model.file = 'DD-model_rfx_h.R',
                                                  'hc_scale'
                           ))
 
-as.mcmc.rjags <- function (x, subs=NULL,offs=100, ...) 
+as.mcmc.rjags <- function (x, subs=NULL,offs=100, ...)
 {
   x <- x$BUGSoutput
   mclist <- vector("list", x$n.chains)
