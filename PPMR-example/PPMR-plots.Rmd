@@ -40,7 +40,7 @@ ssd <- plyr::llply(sdss,function(x) {
   colnames(x) <- n
   (x)})
 
-llik <- lapply(ssd,function(mcmc) t(apply(mcmc[,grepl('pred_i',colnames(mcmc))],1,function(x) dnorm(x,tau[pred],log = T))))
+llik <- lapply(ssd,function(mcmc) t(apply(mcmc,1,function(x) dnorm(x[,grepl('mu',colnames(x))],x[,grepl('sd.ppmr',colnames(x))],log = T))))
 
 looic <- lapply(llik,loo)
 waics <- lapply(llik,waic)
@@ -110,7 +110,15 @@ coord_flip() #+
 ```{r predictions, fig.cap="Prediction of log10 predator prey mass ratios, at each of four taxonomic levels. At each level, predictions are made under the assuption that the next lower taxonomic level for the species in question was not included in the analysis (e.g., for prediction at the family level, we assumed that the genus for the prediction was not part of the analysis, and the genus mean had to be drawn from the posterior predictive distribution at the family level.",fig.width=9,fig.height=14}
 
 
+sdss <- list()
+sdss[[1]] <- PPMR_rfx$BUGSoutput$sims.array[,,grepl('pred',dimnames(PPMR_rfx$BUGSoutput$sims.array)[[3]])]
+sdss[[2]] <- PPMR_rfx_h$BUGSoutput$sims.array[,,grepl('pred',dimnames(PPMR_rfx_h$BUGSoutput$sims.array)[[3]])]
 
+ssd <- plyr::llply(sdss,function(x) {
+  n=dimnames(x)[[3]]
+  dim(x) <- c(dim(x)[1]*dim(x)[2],dim(x)[3])
+  colnames(x) <- n
+  (x)})
 
 msd <- reshape2::melt(ssd)
 

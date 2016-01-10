@@ -1,8 +1,5 @@
 require(dplyr)
-
-
-
-
+require(INLA)
 
 DD <- read.csv("DD.csv")
 
@@ -34,7 +31,7 @@ DDdata <- list(
                lDD = (DD$BDT.C),
                pred =pred ,
                NOBS = nrow(DD),
-               cov=rep(1, NOBS),
+               cov=rep(1, nrow(DD)),
                beta=1,
                NPRED = lpred,
                NSPECIES = n(DD$Species),

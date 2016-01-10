@@ -25,10 +25,10 @@ model{
   }
   
     for(s in 1:NSPECIES){
-    lmass[s] ~ dnorm(speciesmu[s],tau[s])
+    lmass[s] ~ dnorm(mu[s],tau[s])
     # species mean drawn from family dist 
-    speciesdev[s] <- speciesmu[s] - genusmu[genus[s]]
-    speciesmu[s] <- genusmu[genus[s]] + genus.xi[genus[s]]*species.eta[s]
+    speciesdev[s] <- mu[s] - genusmu[genus[s]]
+    mu[s] <- genusmu[genus[s]] + genus.xi[genus[s]]*species.eta[s]
     
     #l_obs_sp[s] ~ dnorm(speciesmu[s]+species.xi[s]*sp_pred.eta[s],tau)
     # species tau drawn from hierarchical distr over all families

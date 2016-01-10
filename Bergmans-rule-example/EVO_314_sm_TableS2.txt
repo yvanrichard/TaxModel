@@ -1,0 +1,52 @@
+#NEXUS
+begin taxa;
+	dimensions ntax=40;
+	taxlabels
+	Dipodomys_deserti
+	Homo_sapiens
+	Dipodomys_microps
+	Mustela_frenata
+	Dipodomys_panamintinus
+	Blarina_brevicauda
+	Dipodomys_spectabilis
+	Lepus_americanus
+	Tamiasciurus_douglasii
+	Mustela_nivalis
+	Heteromys_gaumeri
+	Sigmodon_hispidus
+	Chaetodipus_penicillatus
+	Dipodomys_nelsoni
+	Thomomys_bottae
+	Peromyscus_eremicus
+	Dipodomys_ordii
+	Dipodomys_californicus
+	Dipodomys_heermanni
+	Martes_martes
+	Microtus_pennsylvanicus
+	Microtus_montebelli
+	Mustela_erminea
+	Puma_concolor
+	Alces_alces
+	Myotis_daubentoni
+	Anoura_cultrata
+	Dipodomys_phillipsii
+	Dipodomys_agilis
+	Rattus_rattus
+	Peromyscus_maniculatus
+	Dipodomys_compactus
+	Dipodomys_merriami
+	Procyon_lotor
+	Dipodomys_nitratoides
+	Dipodomys_venustus
+	Tamiasciurus_hudsonicus
+	Neotoma_cinerea
+	Myotis_californicus
+	Scapanus_latimanus
+;
+end;
+
+begin trees;
+	tree [&r] tree_1 = ((((((Rattus_rattus:49.9,(Sigmodon_hispidus:40.4,((Peromyscus_eremicus:12.2,Peromyscus_maniculatus:12.2):15.4,Neotoma_cinerea:27.6):12.8):9.5,(Microtus_pennsylvanicus:9.9,Microtus_montebelli:9.9):40.0):31.1,((Chaetodipus_penicillatus:33.8,(((Dipodomys_ordii:6.1,Dipodomys_compactus:6.1):0.7,(((Dipodomys_panamintinus:3.1,Dipodomys_heermanni:3.1):2.5,((Dipodomys_venustus:2.8,Dipodomys_agilis:2.8):1.1,Dipodomys_microps:3.9):1.7,Dipodomys_phillipsii:5.6,Dipodomys_californicus:5.6):1.0,(Dipodomys_merriami:2.1,Dipodomys_nitratoides:2.1):4.5):0.2):0.1,(Dipodomys_deserti:6.4,(Dipodomys_spectabilis:2.8,Dipodomys_nelsoni:2.8):3.6):0.5):26.9):1.4,(Thomomys_bottae:25.0,Heteromys_gaumeri:25.0):10.2):45.8):4.3,(Tamiasciurus_hudsonicus:3.7,Tamiasciurus_douglasii:3.7):81.6):6.5,Lepus_americanus:91.8):2.7,Homo_sapiens:94.5):4.4,(((Alces_alces:88.5,((((Mustela_erminea:9.1,Mustela_frenata:9.1,Mustela_nivalis:9.1):15.0,Martes_martes:24.1):7.4,Procyon_lotor:31.5):35.6,Puma_concolor:67.1):21.4):0.2,(Anoura_cultrata:63.3,(Myotis_daubentoni:12.9,Myotis_californicus:12.9):50.4):25.4):3.1,(Scapanus_latimanus:84.0,Blarina_brevicauda:84.0):7.8):7.1);
+end;
+
+

@@ -33,15 +33,15 @@ tab <- lapply(JM.model.list,function(x)
 
 sdss <- list()
 
-sdss[[1]] <- JM_rfx_s$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_s$BUGSoutput$sims.list))]
-sdss[[2]] <- JM_rfx_u$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_u$BUGSoutput$sims.list))]
-sdss[[3]] <- JM_rfx_g$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_g$BUGSoutput$sims.list))]
-sdss[[4]] <- JM_rfx_h$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_h$BUGSoutput$sims.list))]
-sdss[[5]] <- JM$BUGSoutput$sims.list[grepl('pred',names(JM$BUGSoutput$sims.list))]
+sdss[[1]] <- JM_rfx_s$BUGSoutput$sims.list[grepl('mu',names(JM_rfx_s$BUGSoutput$sims.list))]
+sdss[[2]] <- JM_rfx_u$BUGSoutput$sims.list[grepl('mu',names(JM_rfx_u$BUGSoutput$sims.list))]
+sdss[[3]] <- JM_rfx_g$BUGSoutput$sims.list[grepl('mu',names(JM_rfx_g$BUGSoutput$sims.list))]
+sdss[[4]] <- JM_rfx_h$BUGSoutput$sims.list[grepl('mu',names(JM_rfx_h$BUGSoutput$sims.list))]
+sdss[[5]] <- JM$BUGSoutput$sims.list[grepl('mu',names(JM$BUGSoutput$sims.list))]
 
-llik <- lapply(sdss,function(mcmc) t(apply(as.data.frame(mcmc$mu_pred_s),1,function(x) dnorm(sizes$lmass[pred],x,tau[pred],log = T))))
+llik <- lapply(sdss,function(mcmc) dnorm(sizes$lmass,mcmc[[2]],sqrt(sizes$lmass*0.05),log = T))
 
-looic <- lapply(llik,loo)
+looic <- lapply(llik,loo,wcp=0.2,wtrunc = 1/4)
 waics <- lapply(llik,waic)
 
 waic_tab <- compare(waics[[1]],waics[[2]],waics[[3]],waics[[4]],waics[[5]])
@@ -50,7 +50,7 @@ looic_tab <- compare(looic[[1]],looic[[2]],looic[[3]],looic[[4]],looic[[5]])
 
 tab <- do.call('rbind',tab)
 tab$model <- rownames(tab)
-tab <- cbind(tab[,c(4,1:3)],looic_tab[,c('looic','se_looic','weights')],waic_tab[,c('waic','se_waic','weights')])
+tab <- cbind(tab[,c(4,1:3)],looic_tab[order(rownames(looic_tab)),c('looic','se_looic','weights')],waic_tab[order(rownames(waic_tab)),c('waic','se_waic','weights')])
 
 colnames(tab)[c(7,10)] <- c('w_looic','w_waic')
 
@@ -109,7 +109,17 @@ ggplot(msd) +
 \blandscape
 ```{r predictions, fig.cap="Prediction of degree days to development from taxonomic factors only, at each of four taxonomic levels. At each level, predictions are made under the assuption that the next lower taxonomic level for the species in question was not included in the analysis (e.g., at the family level, we assumed taht the genus for the prediction was not part of the analysis, and the genus mean had to be drawn from the posterior predictive distribution.",fig.width=14,fig.height=9}
 
-msd <- reshape2::melt(sdss)
+
+sds <- list()
+
+sds[[1]] <- JM_rfx_s$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_s$BUGSoutput$sims.list))]
+sds[[2]] <- JM_rfx_u$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_u$BUGSoutput$sims.list))]
+sds[[3]] <- JM_rfx_g$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_g$BUGSoutput$sims.list))]
+sds[[4]] <- JM_rfx_h$BUGSoutput$sims.list[grepl('pred',names(JM_rfx_h$BUGSoutput$sims.list))]
+sds[[5]] <- JM$BUGSoutput$sims.list[grepl('pred',names(JM$BUGSoutput$sims.list))]
+
+
+msd <- reshape2::melt(sds)
 
 msd <- msd %>% 
   mutate(Factor = L2) %>%

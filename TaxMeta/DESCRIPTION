@@ -1,0 +1,8 @@
+Package: TaxMeta
+Title: Taxonomic and phylogenetic meta-analysis and comparative analysis
+Version: 0.0.0.0
+Authors@R: person("Philipp", "Neubauer", email = "philipp@dragonfly.co.nz", role = c("aut", "cre"))
+Description: Bayesian taxonomic and phylogenetic meta-analysis and comparative analysis
+Depends: R (>= 3.2.2)
+License:
+LazyData: true
