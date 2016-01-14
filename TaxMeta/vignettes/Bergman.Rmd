@@ -1,0 +1,186 @@
+---
+title: "Analysing Bergman's rule with TaxMeta"
+author: "Philipp Neubauer"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{r echo=F,message=F,results='hide'}
+require(TaxMeta)
+require(knitr)
+
+opts_chunk$set(cache=TRUE)
+
+```
+
+
+
+# Estimating Bergman's rule for mammals
+
+Using the supplied Bergman dataset:
+
+```{r load Bergman data, cache=T}
+data('Bergman')
+head(Bergman)
+```  
+
+```?Bergman``` gives info about the data. First, to apply the hierarchical model, we need to get the taxonomy using the taxize package:
+
+```{r get taxonomy, cache=T, warning=FALSE, message=FALSE}
+
+taxonomy = c('species','genus','family','order')
+Bergman_full <- get_tax(Bergman, taxonomy)
+
+```
+We can now apply the meta-analysis:
+
+```{r run anlysis}
+
+bergman_res_full <- TaxMeta(Bergman_full,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy,
+                       type='full',
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=25e3,
+                       return_MCMC=T)
+
+bergman_res_full
+```
+
+To plot the contributions of different taxonomic levels, simply plot the result:
+
+```{r plot}
+
+plot(bergman_res_full, 
+     taxonomy = taxonomy)
+
+```
+
+To generate predictions at other taxonomic levels, simply add some bogus data to the data. Say, we need an estimate for a species for which the genus was not in the orginal dataset, but the family was part of the dataset:
+
+```{r predictions}
+
+Bergman_pred <- Bergman_full
+Bergman_pred[length(Bergman_pred)+1,] <- Bergman_pred[11,]
+Bergman_pred[length(Bergman_pred)+2,] <- Bergman_pred[11,]
+
+Bergman_pred[length(Bergman_full)+1,'genus'] <- 'bogus_genus'
+Bergman_pred[length(Bergman_full)+1,'species'] <- 'Bogus species'
+Bergman_pred[length(Bergman_full)+1,'z_response'] <- NA
+Bergman_pred[length(Bergman_full)+2,'species'] <- 'Bogus species'
+Bergman_pred[length(Bergman_full)+2,'z_response'] <- NA
+
+bergman_res_pred <- TaxMeta(Bergman_pred,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy,
+                       type='full',
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=25e3,
+                       return_MCMC=T)
+
+bergman_res_pred
+
+```
+
+We can also compare alternative model formulations:
+
+```{r run alternative models}
+
+bergman_res_fixed <- TaxMeta(Bergman_full,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy,
+                       type='fixed',
+                       scale=0.1,
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=25e3,
+                       return_MCMC=F)
+
+bergman_res_gamma <- TaxMeta(Bergman_full,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy,
+                       type='gamma',
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=25e3,
+                       return_MCMC=F)
+
+bergman_res_unif <- TaxMeta(Bergman_full,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy,
+                       type='uniform',
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=25e3,
+                       return_MCMC=F)
+
+```
+
+And compare the results:
+
+```{r compare}
+
+loo_comp <- loo::compare(bergman_res_fixed$loo,
+             bergman_res_gamma$loo,
+             bergman_res_unif$loo,
+             bergman_res_full$loo)
+
+loo_comp <- data.frame(loo_comp)
+loo_comp$model <- do.call('rbind',strsplit(rownames(loo_comp),split = '\\$'))[,1]
+loo_comp$loo_weight = loo_comp$weight
+
+waic_comp <- loo::compare(bergman_res_fixed$waic,
+             bergman_res_gamma$waic,
+             bergman_res_unif$waic,
+             bergman_res_full$waic)
+
+waic_comp <- data.frame(waic_comp)
+waic_comp$model <- do.call('rbind',strsplit(rownames(waic_comp),split = '\\$'))[,1]
+waic_comp$waic_weight = waic_comp$weight
+
+comp_tab <- dplyr::inner_join(loo_comp,waic_comp,by='model')
+
+knitr::kable(comp_tab[,c('model','looic','se_looic','loo_weight','waic','se_waic','waic_weight')],
+             row.names=F,
+             digits=c(0,1,1,2,1,1,2),
+             align=c('l','r','r','r','r','r','r'))
+
+```
+
+This comparison does not give a good idea of model performance, so lets try a plot:
+
+```{r compare plot}
+
+plot(Full=bergman_res_full, 
+     Fixed =bergman_res_fixed, 
+     Gamma =bergman_res_gamma,
+     Uniform=bergman_res_unif,
+     taxonomy=taxonomy)
+
+```
+  
