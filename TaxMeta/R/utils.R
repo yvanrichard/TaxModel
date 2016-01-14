@@ -150,15 +150,15 @@ get_tax <- function(dataset, taxonomy){
       mutate(Factor = do.call('rbind',strsplit(rownames(msd),'sd.'))[,2])
   }
 
-  .simpleCap <- function(x) {
-    s <- strsplit(x, " ")[[1]]
-    paste(toupper(substring(s, 1, 1)), substring(s, 2),
-          sep = "", collapse = " ")
-  }
-
   msd$Factor <- factor(sapply(as.character(msd$Factor),.simpleCap),
                        levels = sapply(taxonomy,.simpleCap))
 
   msd
 
+}
+
+.simpleCap <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1, 1)), substring(s, 2),
+        sep = "", collapse = " ")
 }
