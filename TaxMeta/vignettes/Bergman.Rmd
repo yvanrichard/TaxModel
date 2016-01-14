@@ -57,7 +57,7 @@ bergman_res_full
 
 To plot the contributions of different taxonomic levels, simply plot the result:
 
-```{r plot}
+```{r plot, fig.width = 8,  fig.height = 5}
 
 plot(bergman_res_full, 
      taxonomy = taxonomy)
@@ -174,7 +174,7 @@ knitr::kable(comp_tab[,c('model','looic','se_looic','loo_weight','waic','se_waic
 
 This comparison does not give a good idea of model performance, so lets try a plot:
 
-```{r compare plot}
+```{r compare plot, fig.width = 8,  fig.height = 5}
 
 plot(Full=bergman_res_full, 
      Fixed =bergman_res_fixed, 
