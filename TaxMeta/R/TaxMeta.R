@@ -35,7 +35,7 @@
 TaxMeta <- function(dataset,
                     response,
                     distribution,
-                    study_epsilon,
+                    study_epsilon = NULL,
                     taxonomy = c('species','genus','family','order'),
                     cont_cov = NULL,
                     fixed_fx = NULL,
@@ -80,12 +80,12 @@ TaxMeta <- function(dataset,
   if(is.null(study_epsilon)) {
 
     if(!any(table(dataset[,taxonomy[1]])>1)){
-    warning("\n no study_epsilon given and no replication at highest taxonomic resolution; trying to estimate epsilon by dropping highest taxonomic level. If this is not what you want, abort now!")
+      warning("\n no study_epsilon given and no replication at highest taxonomic resolution; trying to estimate epsilon by dropping highest taxonomic level. If this is not what you want, abort now!",immediate. = T)
 
       taxonomy <- taxonomy[-1]
 
     } else {
-      warning("\n no study_epsilon given; trying to estimate epsilon")
+      warning("\n no study_epsilon given; trying to estimate epsilon",immediate. = T)
     }
 
   }
@@ -94,8 +94,12 @@ TaxMeta <- function(dataset,
   model_tax <- list()
   ntax <- length(taxonomy)
   taxix <- matrix(NA, NOBS, ntax)
+  #precaution
+  dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
+
+  if(!all(grepl(' ',dataset[,'species']))) dataset[!grepl(' ',dataset[,'species']),'species'] <- apply(dataset[!grepl(' ',dataset[,'species']),c('genus','species')],1,paste,collapse=' ')
   taxonomy <- c(taxonomy,"grand")
-  for (t in 1:ntax){
+  for (t in 1:ntax){c
     taxix[,t] <- afn(dataset[,taxonomy[t]])
     model_tax[[t]] <- .parse_tax(taxonomy[t],taxonomy[t+1],taxix[,t],type)
   }
@@ -117,23 +121,25 @@ TaxMeta <- function(dataset,
   if(!is.null(cont_cov)) {covs <- cbind(covs,dataset[,cont_cov])}
   ncovs = ncol(covs)
 
-
+  # sub lognorml
+  distribution_sub <- distribution
+  if(distribution=='lnorm') distribution_sub = 'norm'
 
   Model <- cat(
     "model{ \n",
     "#data and prediction likelihood \n",
     "for(i in 1:NOBS){ \n",
-    ifelse(loo_waic,paste0("log_lik[i] <- logdensity.",distribution,"(resp[i],",.parse_dist(distribution, study_epsilon),') \n','')),
-      paste0("resp[i] ~ d",distribution,'(',.parse_dist(distribution, study_epsilon),')'), '\n',
+    ifelse(loo_waic,paste0("log_lik[i] <- logdensity.",distribution_sub,"(resp[i],",.parse_dist(distribution, study_epsilon),') \n',''),''),
+    paste0("resp[i] ~ d",distribution_sub,'(',.parse_dist(distribution, study_epsilon),')'), '\n',
     "mu[i] <-betas[1:ncovs]%*%covs[i,1:ncovs] +",
-      ifelse(!is.null(random_fx),paste0(random_fx,'_mu[rfxix[i,',1:nrfx,']]',collapse='+'),''),
+    ifelse(!is.null(random_fx),paste0(random_fx,'_mu[rfxix[i,',1:nrfx,']]',collapse='+'),''),
     paste0(taxonomy[1:ntax],'_mu[taxix[i,',1:ntax,']]',collapse='+'),"} \n",
     "# likelihood for loo and waic for observations only \n",
     '# save predictions \n',
     ifelse(any(preds),paste0("for(i in 1:npreds){ \n",
                              ifelse(!is.null(study_epsilon),
-                           "pred[i] <- resp[preds[i]] \n} \n",
-                           "pred[i] <- mu[preds[i]] \n} \n")),''),
+                                    "pred[i] <- resp[preds[i]] \n} \n",
+                                    "pred[i] <- mu[preds[i]] \n} \n")),''),
     "# fixed and regression effects \n",
     .parse.fixed_fx(ncovs),
     "# random effects \n",
@@ -143,7 +149,7 @@ TaxMeta <- function(dataset,
     "# scale model \n",
     .parse_scale_model(type),
     "# estimate epsilon if needed \n",
-    ifelse(is.null(study_epsilon),"epsilon ~ dgamma(1-e6,1-e6) \n",''),
+    ifelse(is.null(study_epsilon),"epsilon ~ dgamma(1e-6,1e-6) \n",''),
     "}", file='taxmodel.R')
 
 
@@ -155,7 +161,7 @@ TaxMeta <- function(dataset,
                 covs=covs,
                 taxix=taxix,
                 resp=resp
-                )
+  )
 
   if(type!='full') datas$scale=scale
   if(any(preds)) {
@@ -194,15 +200,22 @@ TaxMeta <- function(dataset,
 
   if(!return_MCMC) {
     res <- summary(as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))]))))
-    }
+  }
 
-  if(!is.null(loo_waic)) res_out <- list(
-    result=res,
-    convergence = diagn,
-    waic = loo::waic(cres[,grepl('log_lik',colnames(cres))]),
-    loo = loo::loo(cres[,grepl('log_lik',colnames(cres))])
-                              )
+  if(loo_waic==T) {
+    res_out <- list(
+      result=res,
+      convergence = diagn,
+      waic = loo::waic(cres[,grepl('log_lik',colnames(cres))]),
+      loo = loo::loo(cres[,grepl('log_lik',colnames(cres))])
+    )
+  } else {
 
+    res_out <- list(
+      result=res,
+      convergence = diagn)
+
+  }
   class(res_out) <- 'TaxMeta'
   res_out
 }

@@ -74,12 +74,12 @@ get_tax <- function(dataset, taxonomy){
   if (is.null(eps)){
     switch(dist,
            norm = "mu[i],epsilon",
-           lnorm = "mu[i],epsilon",
+           lnorm = "exp(mu[i]),epsilon",
            gamma = "epsilon,epsilon/exp(mu[i])")
   } else {
     switch(dist,
            norm = "mu[i],epsilon[i]",
-           lnorm = "mu[i],epsilon[i]",
+           lnorm = "exp(mu[i]),epsilon[i]",
            gamma = "epsilon[i],epsilon[i]/exp(mu[i])")
 
   }
