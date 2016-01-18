@@ -64,6 +64,11 @@ TaxMeta <- function(dataset,
 
   }
 
+  ##--- lower case taxonomy names
+
+  tix <- which(colnames(dataset) %in% taxonomy)
+  taxonomy <- tolower(taxonomy)
+  colnames(dataset)[tix] <- taxonomy
 
 
   NOBS = nrow(dataset)
@@ -155,7 +160,7 @@ TaxMeta <- function(dataset,
 
   ###---- run jags model
 
-  params <- .parse.params(type, preds, loo_waic,taxonomy[1:ntax],random_fx)
+  params <- .parse.params(type, preds, loo_waic,taxonomy[1:ntax],study_epsilon, random_fx)
   datas <- list(NOBS=NOBS,
                 ncovs=ncovs,
                 covs=covs,

@@ -2,10 +2,9 @@
 title: "Mammal sizes"
 author: "Philipp Neubauer"
 date: "`r Sys.Date()`"
-output: 
-  pdf_document: 
-    latex_engine: xelatex
+output: pdf_document
 ---
+
 ```{r echo=F,message=F,results='hide'}
 require(TaxMeta)
 require(knitr)
@@ -18,42 +17,52 @@ opts_chunk$set(cache=TRUE)
 
 # Variability in mammal size
 
-```{r load sizes data}
-data('sizes')
-head(sizes)
+```{r load insects data}
+data('insects')
+head(insects)
 ```  
 
-```?sizes``` gives info about the data. First, to apply the hierarchical model, we need to get the taxonomy using the taxize package:
+```?insects``` gives info about the data. First, to apply the hierarchical model, we need to get the taxonomy using the taxize package:
 
-```{r get taxonomy,warning=FALSE, message=FALSE}
+```{r get taxonomy, warning=FALSE, message=FALSE}
 
-taxonomy = c('species','genus','family','order')
+taxonomy = c('Species','Genus','Family','Order')
 
 ```
 We can now apply the meta-analysis:
 
 ```{r run anlysis}
 
-sizes_res_full <- TaxMeta(sizes,
-                       'lmass',
+insects_ss <- insects %>% filter(!is.na(EADDC),  
+                                 !is.na(BDT),
+                                 EADDC < 3000,
+                                 BDT >-2)
+
+stdise <- function(x) (x-mean(x, na.rm=T))/sd(x, na.rm=T)
+
+insects_ss$lDD <- log10(insects_ss$EADDC)
+insects_ss$lUDT <- stdise(insects_ss$UDT)
+
+insects_res_full <- TaxMeta(insects_ss,
+                       'lDD',
                        distribution = 'norm',
                        taxonomy = taxonomy,
                        type='full',
-                       loo_waic = T,
+                       cont_cov = 'BDT',
+                       loo_waic = F,
                        n.chains = 3,
                        n.iter = 50e3,
                        n.thin=25,
                        n.burnin=10e3,
-                       return_MCMC=F)
-
-sizes_res_full
+                       return_MCMC=T)
+insects_res_full
 ```
 
 To plot the contributions of different taxonomic levels, simply plot the result:
 
 ```{r plot, fig.width = 7,  fig.height = 5}
 
-plot(sizes_res_full, 
+plot(insects_res_full, 
      taxonomy = taxonomy)
 
 ```
@@ -62,29 +71,30 @@ To generate predictions at other taxonomic levels, simply add some bogus data to
 
 ```{r predictions}
 
-sizes_pred <- sizes
-sizes_pred[length(sizes_pred)+1,] <- sizes_pred[11,]
-sizes_pred[length(sizes_pred)+2,] <- sizes_pred[11,]
+insects_pred <- insects_ss
+insects_pred[length(insects_pred)+1,] <- insects_pred[11,]
+insects_pred[length(insects_pred)+2,] <- insects_pred[11,]
 
-sizes_pred[length(sizes_full)+1,'genus'] <- 'bogus_genus'
-sizes_pred[length(sizes_full)+1,'species'] <- 'Bogus species'
-sizes_pred[length(sizes_full)+1,'z_response'] <- NA
-sizes_pred[length(sizes_full)+2,'species'] <- 'Bogus species'
-sizes_pred[length(sizes_full)+2,'z_response'] <- NA
+insects_pred[length(insects_ss)+1,'genus'] <- 'bogus_genus'
+insects_pred[length(insects_ss)+1,'species'] <- 'Bogus species'
+insects_pred[length(insects_ss)+1,'z_response'] <- NA
+insects_pred[length(insects_ss)+2,'species'] <- 'Bogus species'
+insects_pred[length(insects_ss)+2,'z_response'] <- NA
 
-sizes_res_pred <- TaxMeta(sizes_pred,
-                      'lmass',
+insects_res_pred <- TaxMeta(insects_ss,
+                       'lDD',
                        distribution = 'norm',
                        taxonomy = taxonomy,
                        type='full',
-                       loo_waic = T,
+                       cont_cov = 'BDT',
+                       loo_waic = F,
                        n.chains = 3,
                        n.iter = 50e3,
                        n.thin=25,
-                       n.burnin=5e3,
+                       n.burnin=10e3,
                        return_MCMC=F)
 
-sizes_res_pred
+insects_res_pred
 
 ```
 
@@ -92,44 +102,44 @@ We can also compare alternative model formulations:
 
 ```{r run alternative models}
 
-sizes_res_fixed <- TaxMeta(sizes_full,
-                       'lmass',
+insects_res_fixed <- TaxMeta(insects_ss,
+                       'lDD',
                        distribution = 'norm',
-                       study_epsilon = 'se',
                        taxonomy = taxonomy,
                        type='fixed',
+                       cont_cov = 'BDT',
                        scale=0.1,
                        loo_waic = T,
                        n.chains = 3,
                        n.iter = 50e3,
                        n.thin=25,
-                       n.burnin=5e3,
+                       n.burnin=10e3,
                        return_MCMC=F)
 
-sizes_res_gamma <- TaxMeta(sizes_full,
-                       'lmass',
+insects_res_gamma <- TaxMeta(insects_ss,
+                       'lDD',
                        distribution = 'norm',
-                       study_epsilon = 'se',
                        taxonomy = taxonomy,
                        type='gamma',
+                       cont_cov = 'BDT',
                        loo_waic = T,
                        n.chains = 3,
                        n.iter = 50e3,
                        n.thin=25,
-                       n.burnin=5e3,
+                       n.burnin=10e3,
                        return_MCMC=F)
 
-sizes_res_unif <- TaxMeta(sizes_full,
-                       'z_response',
+insects_res_unif <- TaxMeta(insects_ss,
+                       'lDD',
                        distribution = 'norm',
-                       study_epsilon = 'se',
                        taxonomy = taxonomy,
                        type='uniform',
+                       cont_cov = 'BDT',
                        loo_waic = T,
                        n.chains = 3,
                        n.iter = 50e3,
                        n.thin=25,
-                       n.burnin=5e3,
+                       n.burnin=10e3,
                        return_MCMC=F)
 
 ```
@@ -138,19 +148,19 @@ And compare the results:
 
 ```{r compare}
 
-loo_comp <- loo::compare(sizes_res_fixed$loo,
-             sizes_res_gamma$loo,
-             sizes_res_unif$loo,
-             sizes_res_full$loo)
+loo_comp <- loo::compare(insects_res_fixed$loo,
+             insects_res_gamma$loo,
+             insects_res_unif$loo,
+             insects_res_full$loo)
 
 loo_comp <- data.frame(loo_comp)
 loo_comp$model <- do.call('rbind',strsplit(rownames(loo_comp),split = '\\$'))[,1]
 loo_comp$loo_weight = loo_comp$weight
 
-waic_comp <- loo::compare(sizes_res_fixed$waic,
-             sizes_res_gamma$waic,
-             sizes_res_unif$waic,
-             sizes_res_full$waic)
+waic_comp <- loo::compare(insects_res_fixed$waic,
+             insects_res_gamma$waic,
+             insects_res_unif$waic,
+             insects_res_full$waic)
 
 waic_comp <- data.frame(waic_comp)
 waic_comp$model <- do.call('rbind',strsplit(rownames(waic_comp),split = '\\$'))[,1]
@@ -169,10 +179,10 @@ This comparison does not give a good idea of model performance, so lets try a pl
 
 ```{r compare plot, fig.width = 7,  fig.height = 5}
 
-plot(Full=sizes_res_full, 
-     Fixed =sizes_res_fixed, 
-     Gamma =sizes_res_gamma,
-     Uniform=sizes_res_unif,
+plot(Full=insects_res_full, 
+     Fixed =insects_res_fixed, 
+     Gamma =insects_res_gamma,
+     Uniform=insects_res_unif,
      taxonomy=taxonomy)
 
 ```

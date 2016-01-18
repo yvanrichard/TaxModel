@@ -106,12 +106,13 @@ get_tax <- function(dataset, taxonomy){
                  scale ~ dgamma(2,hyper_scale) \n")
 }
 
-.parse.params <- function(type, preds, loo_waic, taxonomy, random_fx=NULL) {
+.parse.params <- function(type, preds, loo_waic, taxonomy, study_epsilon, random_fx=NULL) {
 
   #cat(random_fx)
   c('betas',
   if(type!='full' & type!='fixed') 'scale',
   if(type=='full') c(paste0(taxonomy,'_scale'),"hyper_scale"),
+  if(is.null(study_epsilon)) 'epsilon',
   paste0('sd.',c(random_fx,taxonomy)),
   if(loo_waic==T) 'log_lik',
   if(any(preds)) 'pred'
