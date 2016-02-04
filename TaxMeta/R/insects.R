@@ -6,6 +6,6 @@
 #'   \item UDT Upper development threshold in degree celsius
 #' }
 #'
-#' @format A data frame with 1,619 rows and 8 variables
+#' @format A data frame with 2719 rows and 7 variables
 #' @source \url{https://secure.fera.defra.gov.uk/pratique/publications.cfm}
 "insects"

@@ -1,7 +1,6 @@
 #' plot the contribution of taxonomic levels to variance in a taxonomic analysis
 #' @name plot
 #' @param res a result of class TaxMeta
-#' @param taxonomy the taxonomy used to estimate res, must be entered as a named argument
 #'
 #' @author Philipp Neubauer
 #' @references Neubauer.P. Minto, C, and Jensen, O.P. (in prep)
@@ -11,12 +10,11 @@ NULL
 
 #' @method plot TaxMeta
 #' @export
-plot.TaxMeta <- function(...,taxonomy){
+plot.TaxMeta <- function(...){
 
-  if(missing(taxonomy)) stop('Please supply taxonomy as a named argument')
-  if(nargs()==2){
+  if(nargs()==1){
 
-    msd <- .summarise.res(...,taxonomy)
+    msd <- .summarise.res(...)
 
     ggplot(msd) +
       geom_point(aes(x=Factor, y=means), size=4) +
@@ -25,13 +23,13 @@ plot.TaxMeta <- function(...,taxonomy){
       theme_classic() +
       coord_flip() +
       #ylab(expression(Finite~population~variance~(log[10]~PPMR))) +
-      ylab('Proportion of variance')
+      ylab('Finite population SD')
 
   } else {
 
     sds <- list(...)
 
-    msd <- lapply(sds, .summarise.res, taxonomy)
+    msd <- lapply(sds, .summarise.res)
     msd <- lapply(1:length(msd), function(x) {
       msd[[x]]$Model <- names(sds)[x]
       as.data.frame(msd[[x]])})
@@ -52,7 +50,7 @@ plot.TaxMeta <- function(...,taxonomy){
       theme_classic() +
       coord_flip() +
       #ylab(expression(Finite~population~variance~(log[10]~PPMR))) +
-      ylab('Proportion of variance')
+      ylab('Finite population SD')
 
   }
 }

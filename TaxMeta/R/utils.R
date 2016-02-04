@@ -3,11 +3,11 @@
 #' @param taxonomy the taxonomy to retrieve
 #' @export
 get_tax <- function(dataset, taxonomy){
-  try(if(all(grepl(' ',dataset[,'species']))){
-    cs <- taxize::classification(dataset[,'species'], db = 'ncbi')
+  if(all(grepl(' ',dataset[,'species']))){
+    cs <- try(taxize::classification(dataset[,'species'], db = 'ncbi'), silent=T)
   } else {
-    cs <- taxize::classification(apply(dataset[,c('genus','species')],1,paste,collapse=' '), db = 'ncbi')
-  }, silent=T)
+    cs <- try(taxize::classification(apply(dataset[,c('genus','species')],1,paste,collapse=' '), db = 'ncbi'), silent=T)
+  }
 
   if(is(cs)=="try-error") stop("Could not retrieve taxonomic information, aborting. Either the dataframe did not contain genus and species columns, or you do not have an internet connection for R to use.")
 
@@ -30,7 +30,9 @@ get_tax <- function(dataset, taxonomy){
 
 
 # parse random fx
-.parse_rfx <- function(random_fx,rfxix) {
+.parse_rfx <- function(random_fx,rfxix,type) {
+
+  if (type != 'full'){
 
   paste0("for(r in 1:",max(rfxix),") { \n",
          random_fx,"_mu[r] <- ",random_fx,".xi*",random_fx,".eta[r] \n",
@@ -38,6 +40,15 @@ get_tax <- function(dataset, taxonomy){
          random_fx,".xi ~ dnorm(0,scale) \n",
          random_fx,".prec ~ dgamma(0.5,0.5) \n",
          "sd.",random_fx," <- sd(",random_fx,"_mu)")
+  } else {
+    paste0("for(r in 1:",max(rfxix),") { \n",
+           random_fx,"_mu[r] <- ",random_fx,".xi*",random_fx,".eta[r] \n",
+           random_fx,".eta[r] ~ dnorm(0,",random_fx,".prec) \n } \n",
+           random_fx,".prec ~ dgamma(0.5,0.5) \n",
+           "sd.",random_fx," <- sd(",random_fx,"_mu) \n",
+           random_fx,".xi ~ dnorm(0,",random_fx,"_scale) \n",
+           random_fx,"_scale ~ dgamma(2,hyper_scale) \n")
+  }
 }
 
 # parse taxonomic fx
@@ -47,23 +58,23 @@ get_tax <- function(dataset, taxonomy){
 
     if(type != "full"){
 
-      paste0("for(r in 1:",max(taxix),") { \n",
+      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n",
              tax_fx,"_mu[r] <- ",tax_next,".xi*",tax_fx,".eta[r] \n",
              tax_fx,".eta[r] ~ dnorm(0,",tax_next,".prec) \n } \n",
              tax_next,".xi ~ dnorm(0,scale) \n",
              tax_next,".prec ~ dgamma(0.5,0.5) \n",
              "sigma.",tax_fx," <- abs(",tax_next,".xi)/sqrt(",tax_next,".prec) \n",
-             "sd.",tax_fx," <- sd(",tax_fx,"_mu)")
+             "sd.",tax_fx," <- sd(",tax_fx,"_mu) \n")
     } else {
 
-      paste0("for(r in 1:",max(taxix),") { \n",
+      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n",
              tax_fx,"_mu[r] <- ",tax_next,".xi",ifelse(tax_next != "grand",paste0('[',tax_next,'[r]]'),''),"*",tax_fx,".eta[r] \n",
              tax_fx,".eta[r] ~ dnorm(0,",tax_next,".prec) \n",
              tax_fx,".xi[r] ~ dnorm(0,",tax_fx,"_scale) \n} \n",
              tax_fx,"_scale ~ dgamma(2,hyper_scale) \n",
              #tax_fx,".xi_pred ~ dnorm(0,",tax_fx,"_scale) \n",
              tax_next,".prec ~ dgamma(0.5,0.5) \n",
-             "sd.",tax_fx," <- sd(",tax_fx,"_mu)",
+             "sd.",tax_fx," <- sd(",tax_fx,"_mu) \n",
              ifelse(tax_next == "grand",'grand.xi ~ dnorm(0,2/hyper_scale)',''))
 
     }
@@ -89,11 +100,10 @@ get_tax <- function(dataset, taxonomy){
 .parse.fixed_fx <- function(ncov) {
 
   paste0("for(b in 1:",ncov,") { \n",
-            "betas[b] ~ dnorm(0,1e-6) \n",
+          "betas[b] ~ dnorm(regr_mu[b],regr_tau[b]) \n",
          "} \n")
 
-
-}
+  }
 
 
 # parse distribution
@@ -102,17 +112,18 @@ get_tax <- function(dataset, taxonomy){
          fixed = '',
          gamma = "scale ~ dgamma(1e-9,1e-9) \n",
          uniform = "scale ~ dunif(0.00001,100000) \n",
-         full = "hyper_scale ~ dunif(0.00001,100000) \n
-                 scale ~ dgamma(2,hyper_scale) \n")
+         full = "hyper_scale ~ dunif(0.00001,100000) \n")
 }
 
-.parse.params <- function(type, preds, loo_waic, taxonomy, study_epsilon, random_fx=NULL) {
+.parse.params <- function(type, preds, loo_waic, taxonomy, study_epsilon, random_fx=NULL, save_tax=NULL) {
 
   #cat(random_fx)
   c('betas',
   if(type!='full' & type!='fixed') 'scale',
+  if(!is.null(save_tax)) paste0(tolower(save_tax),'_mu'),
   if(type=='full') c(paste0(taxonomy,'_scale'),"hyper_scale"),
-  if(is.null(study_epsilon)) 'epsilon',
+  if(type=='full' & !is.null(random_fx)) paste0(random_fx,'_scale'),
+  if(is.null(study_epsilon)) 'sd.epsilon',
   paste0('sd.',c(random_fx,taxonomy)),
   if(loo_waic==T) 'log_lik',
   if(any(preds)) 'pred'
@@ -121,19 +132,22 @@ get_tax <- function(dataset, taxonomy){
 
 }
 
-.summarise.res <- function(res, taxonomy) {
+.summarise.res <- function(res,epsilon=NULL) {
+
+  taxonomy = res$taxonomy
+  random_fx = res$random_fx
 
   if(all(!is(res$result)=="summary.mcmc")) {
 
     res <- do.call('rbind',res$result)
     res <- res[,grepl('sd',colnames(res))]
 
-    res <- apply(res,1,function(z) z/sum(z))
+    #res <- apply(res,1,function(z) z/sum(z))
 
     msd <- reshape2::melt(res)
 
     msd <- msd %>%
-      mutate(Factor = do.call('rbind',strsplit(as.character(Var1),'sd.'))[,2]) %>%
+      mutate(Factor = do.call('rbind',strsplit(as.character(Var2),'sd.'))[,2]) %>%
       group_by(Factor) %>%
       summarise(means = median(value),
                 q1 = quantile(value,0.025),
@@ -143,16 +157,20 @@ get_tax <- function(dataset, taxonomy){
 
   } else {
 
-    ix <- unlist(lapply(taxonomy,function(x) which(grepl(x,rownames(res$result[[2]])))))
-    msd <- res$result[[2]][ix,]
+    msd <- res$result[[2]][grepl('sd',rownames(res$result[[2]])),]
     colnames(msd) <- c('q1','q11','means',"q33",'q3')
 
     msd <- data.frame(msd) %>%
       mutate(Factor = do.call('rbind',strsplit(rownames(msd),'sd.'))[,2])
   }
 
+  if(any(grepl('epsilon',msd$Factor))) epsilon="epsilon"
+
   msd$Factor <- factor(sapply(as.character(msd$Factor),.simpleCap),
-                       levels = sapply(taxonomy,.simpleCap))
+                       levels = sapply(c(taxonomy,
+                                         random_fx,
+                                         epsilon),
+                                       .simpleCap))
 
   msd
 
