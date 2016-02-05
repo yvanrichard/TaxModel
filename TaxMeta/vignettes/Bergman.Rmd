@@ -159,9 +159,9 @@ bergman_res_full <- TaxMeta(Bergman_full,
                        type='full',
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=20e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=T)
 
 bergman_res_full
@@ -202,9 +202,9 @@ bergman_res_pred <- TaxMeta(Bergman_pred,
                        type='full',
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=25e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=T)
 
 bergman_res_pred
@@ -229,7 +229,7 @@ for (i in 1:40){
                            loo_waic = T,
                            n.chains = 3,
                            n.iter = 15e3,
-                           n.thin=3,
+                           n.thin=5,
                            n.burnin=2e3,
                            return_MCMC=F)
   
@@ -253,10 +253,10 @@ arrows(Bergman_full$z_response-Bergman_full$se,Bergman_full$z_response, Bergman_
 abline(a=0,b=1)
 
 
-plot(Bergman_full$z_response,this.cvss[,2], pch=16,xlim=c(-2,2),ylim=c(-5,5), xlab='Observed', ylab='Predicted')
+plot(Bergman_full$z_response,this.cvs[,2], pch=16,xlim=c(-2,2),ylim=c(-5,5), xlab='Observed', ylab='Predicted')
 #points(insects_ss$lDD,lm.cv.spred[,1], col=4,pch=16)
 #arrows(insects_ss$lDD, lm.cv.spred[,2], insects_ss$lDD, lm.cv.spred[,3], length=0.05, angle=90, code=3,col=4)
-arrows(Bergman_full$z_response, this.cvss[,1], Bergman_full$z_response, this.cvss[,3], length=0.05, angle=90, code=3)
+arrows(Bergman_full$z_response, this.cvs[,1], Bergman_full$z_response, this.cvs[,3], length=0.05, angle=90, code=3)
 points(Bergman_full$z_response,Bergman_full$z_response,pch=16,col=4)
 arrows(Bergman_full$z_response-Bergman_full$se,Bergman_full$z_response, Bergman_full$z_response+Bergman_full$se,Bergman_full$z_response, length=0.05, angle=90, code=3,col=4)
 abline(a=0,b=1)
@@ -295,9 +295,9 @@ bergman_res_fixed <- TaxMeta(Bergman_full,
                        scale=0.01,
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=10e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=F)
 
 bergman_res_simple <- TaxMeta(Bergman_full,
@@ -309,9 +309,9 @@ bergman_res_simple <- TaxMeta(Bergman_full,
                        scale=0.01,
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=10e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=F)
 
 ```
@@ -326,9 +326,9 @@ bergman_res_gamma <- TaxMeta(Bergman_full,
                        type='gamma',
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=25e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=F)
 
 bergman_res_unif <- TaxMeta(Bergman_full,
@@ -339,9 +339,9 @@ bergman_res_unif <- TaxMeta(Bergman_full,
                        type='uniform',
                        loo_waic = T,
                        n.chains = 3,
-                       n.iter = 150e3,
-                       n.thin=30,
-                       n.burnin=25e3,
+                       n.iter = 50e3,
+                       n.thin=25,
+                       n.burnin=5e3,
                        return_MCMC=F)
 
 ```
@@ -385,7 +385,7 @@ This comparison does not give a good idea of model performance, so lets try a pl
 
 plot(Full=bergman_res_full, 
      Fixed =bergman_res_fixed, 
-     Simple =bergman_res_simpe, 
+     Simple =bergman_res_simple, 
      Gamma =bergman_res_gamma,
      Uniform=bergman_res_unif)
 
