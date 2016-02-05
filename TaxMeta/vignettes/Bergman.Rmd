@@ -385,7 +385,6 @@ This comparison does not give a good idea of model performance, so lets try a pl
 
 plot(Full=bergman_res_full, 
      Fixed =bergman_res_fixed, 
-     Simple =bergman_res_simple, 
      Gamma =bergman_res_gamma,
      Uniform=bergman_res_unif)
 
