@@ -214,7 +214,7 @@ bergman_res_pred
 This easy prediction mechanism lets use compare leave-one out predictions on this small dataset relative to the ML LMM.
 
 ```{r check model fit, results='hide', message=FALSE}
-this.cvss <- matrix(NA,40, 3)
+this.cvs <- matrix(NA,40, 3)
 for (i in 1:40){
   
   Bergman_test <- Bergman_full
@@ -239,21 +239,21 @@ for (i in 1:40){
   pred <- means[grepl('pred',names(means))]
   q1 <- q1[grepl('pred',names(q1))]
   q3 <- q3[grepl('pred',names(q3))]
-  this.cvss[i,] <- cbind(q1,pred,q3)
+  this.cvs[i,] <- cbind(q1,pred,q3)
 }
 ```
 Plotting the results: 
 ```{r fig.cap='Observed vs predicted Z-values from leave-one-out cross validation for the LMM with species level error (left) and the TaxMeta predictions (right). The error bars for predictions are the 95% prediction interval, the blue bars are the standard error of the individual Z-values.'}
 par(mfrow=c(1,2))
 # LM predictions
-plot(Bergman_full$z_response,lm.cv.spred[,1], pch=16,xlim=c(-2,2),ylim=c(-5,5))
+plot(Bergman_full$z_response,lm.cv.spred[,1], pch=16,xlim=c(-2,2),ylim=c(-5,5), xlab='Observed', ylab='Predicted')
 arrows(Bergman_full$z_response, lm.cv.spred[,2], Bergman_full$z_response, lm.cv.spred[,3], length=0.05, angle=90, code=3)
 points(Bergman_full$z_response,Bergman_full$z_response,pch=16,col=4)
 arrows(Bergman_full$z_response-Bergman_full$se,Bergman_full$z_response, Bergman_full$z_response+Bergman_full$se,Bergman_full$z_response, length=0.05, angle=90, code=3,col=4)
 abline(a=0,b=1)
 
 
-plot(Bergman_full$z_response,this.cvss[,2], pch=16,xlim=c(-2,2),ylim=c(-5,5))
+plot(Bergman_full$z_response,this.cvss[,2], pch=16,xlim=c(-2,2),ylim=c(-5,5), xlab='Observed', ylab='Predicted')
 #points(insects_ss$lDD,lm.cv.spred[,1], col=4,pch=16)
 #arrows(insects_ss$lDD, lm.cv.spred[,2], insects_ss$lDD, lm.cv.spred[,3], length=0.05, angle=90, code=3,col=4)
 arrows(Bergman_full$z_response, this.cvss[,1], Bergman_full$z_response, this.cvss[,3], length=0.05, angle=90, code=3)

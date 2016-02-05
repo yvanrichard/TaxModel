@@ -22,6 +22,8 @@ opts_chunk$set(cache=TRUE, autodep=TRUE, warning=FALSE ,message=FALSE)
 
 ## Load data
 
+Data is from Jarosik et al, Journal of Entomology - DOI: http://dx.doi.org/10.1603/EC11247.
+
 ```{r load insects data}
 data('insects')
 head(insects)
@@ -49,22 +51,30 @@ insects$lBDT <- stdise(insects$BDT)
 
 insects_ss <- insects %>% filter(!is.na(BDT), !is.na(lDD))
 
+lm.ins <- lm(lDD~lBDT+Species,data=insects_ss)
+AIC(lm.ins)
 
-lm.ins <- lmer(lDD~lBDT+(1|Species)+(1|Genus)+(1|Family)+(1|Order),data=insects_ss)
+lm2.ins <- lm(lDD~lBDT+Species+Genus+Family+Order,data=insects_ss)
+AIC(lm2.ins)
+
+lmm.ins <- lmer(lDD~lBDT+(1|Species)+(1|Genus)+(1|Family)+(1|Order),data=insects_ss)
+AIC(lmm.ins)
 
 plot(fitted(lm.ins),insects_ss$lDD[!is.na(insects_ss$lDD)])
 abline(a=0,b=1)
 
-confint.merMod(lm.ins,method='Wald')
-confint.merMod(lm.ins)
+confint.merMod(lmm.ins,method='Wald')
+confint.merMod(lmm.ins)
 
 
-# reproduce results
-vcv <- as.data.frame(lme4::VarCorr(lm.ins))
+# reproduce results from 
+vcv <- as.data.frame(lme4::VarCorr(lmm.ins))
 vcv$vcov/sum(vcv$vcov)
+```
 
-lm.ins.pred <- predict(lm.ins,insects[is.na(insects$lDD)&!is.na(insects$BDT),],allow.new.levels = T)
+These results match those in Jarosik et al. 2011; with most of the variation at the order level (even when including the predictor...).
 
+```{r} 
 # out of sample prediction - species
 spec <- as.numeric(as.factor(insects_ss$Species))
 ssamp <- sample(1:10,max(spec),r=T)
@@ -76,16 +86,14 @@ for (i in 1:10){
   
 }
 
-plot(insects_ss$lDD,lm.cv.spred[,1])
+plot(insects_ss$lDD,lm.cv.spred[,1], xlab='Observed', ylab='Predicted')
 arrows(insects_ss$lDD, lm.cv.spred[,2], insects_ss$lDD, lm.cv.spred[,3], length=0.05, angle=90, code=3)
 abline(a=0,b=1)
+```
 
-ii <- insects[is.na(insects$lDD)&!is.na(insects$lBDT),]
+How does TaxMeta compare?
 
-lm.pred <- merTools::predictInterval(lm.ins,newdata=ii)
-reSims <- merTools::REsim(lm.ins, n.sims = 100)
-merTools::plotREsim(reSims, stat = 'median', sd = TRUE)
-reSims %>% filter(groupFctr=='Family')
+```{r}
 
 insects_res_full <- TaxMeta(insects[!is.na(insects$lBDT),],
                        'lDD',
