@@ -70,7 +70,12 @@ TaxMeta <- function(dataset,
   ##--- lower case taxonomy names
 
   tix <- match(taxonomy, colnames(dataset))
-  dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
+  # just to make sure its not factors!
+  if(length(taxonomy)>1) {
+    dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
+  } else {
+    dataset[,taxonomy] <- as.character(dataset[,taxonomy])
+  }
   taxonomy <- tolower(taxonomy)
   colnames(dataset)[tix] <- taxonomy
 
@@ -217,9 +222,10 @@ TaxMeta <- function(dataset,
   cres <- do.call('rbind',res)
   colnames(cres)[grepl('betas',colnames(cres))] <- c('Intercept',unlist(apply(data.frame(dataset[,fixed_fx]),2,function(x) sort(unique(x)))),cont_cov)
 
-  diagn <- try(gelman.diag(as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('pred',colnames(x))])))))
+
   res <- as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))])))
 
+  diagn <- try(gelman.diag(as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('pred',colnames(x))])))))
 
   if(!return_MCMC) {
     res <- summary(res)

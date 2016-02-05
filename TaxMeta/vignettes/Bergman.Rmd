@@ -4,11 +4,12 @@ author: "Philipp Neubauer"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
-```{r echo=F,message=F,results='hide'}
+```{r echo=F,message=F,warning=FALSE,results='hide'}
 require(TaxMeta)
 require(knitr)
+require(lme4)
 
-opts_chunk$set(cache=TRUE)
+opts_chunk$set(cache=TRUE, autodep=TRUE, warning = FALSE ,message=F)
 
 ```
 
@@ -18,22 +19,137 @@ opts_chunk$set(cache=TRUE)
 
 Using the supplied Bergman dataset:
 
-```{r load Bergman data, cache=T}
+```{r load Bergman data, cache=TRUE}
 data('Bergman')
 head(Bergman)
 ```  
 
 ```?Bergman``` gives info about the data. First, to apply the hierarchical model, we need to get the taxonomy using the taxize package:
 
-```{r get taxonomy, cache=T, warning=FALSE, message=FALSE}
+```{r get taxonomy, cache=TRUE, warning=FALSE, message=FALSE}
 
 taxonomy = c('species','genus','family','order')
 Bergman_full <- get_tax(Bergman, taxonomy)
 
 ```
-We can now apply the meta-analysis:
+We can now get started with the meta-analysis. Supplied are estimates of the (Fischer) Z-transformed correlations found between mammal body size and latitude across 40 studies. Following Adams (2008) and Hadfield & Nakagawa (2010), the variance of these estimates was estiamted as 1/(N-3). 
 
-```{r run anlysis}
+To conduct a taxonomic meta-analysis, a reasoanable first try would be a taxonomic model, estimated using maximum likelihood (REML in LME4 for random effects models). Note that the study standard error cannot be specified directly, and has to be given as a weight for each estiamted z-value.
+
+Starting with a fixed meta-analysis - i.e., model m3 in Hadfield \& Nakagawa - a weighted mean. Same result as in their Appendix table 2:
+
+```{r ML estiamtion}
+# 
+lm.bergman <- lm(z_response~1,data=Bergman_full, weights = 1/se^2)
+summary(lm.bergman)
+confint(lm.bergman,method='Wald')
+AIC(lm.bergman)
+```
+
+A simple LMM with only species specific error (model m5 in  HAdfield and Nakagawa). In LME4, I need to turn off some internal controls.
+
+```{r}
+slmm.bergman <- lme4::lmer(z_response~1+(1|species),data=Bergman_full, weights = 1/se^2,control = lmerControl(check.nobs.vs.nRE='ignore',check.nobs.vs.nlev='ignore'))
+
+summary(slmm.bergman)
+CI <- confint.merMod(slmm.bergman,method='Wald')
+CI[nrow(CI),]
+AIC(slmm.bergman)
+```
+
+Again, we recover the results from model m5 in Hadfield \& Nakagawa. AIC suggests a slightly better model and non-significant intercept. The taxonomic model can be specified in a nested way - although the nested formulation here is not really necessary - .e., does not make a difference in LME4.
+
+```{r}
+tlmm.bergman <- lme4::lmer(z_response~1+(1|genus:species)+(1|family:genus)+(1|order:family)+(1|order),data=Bergman_full, weights = 1/se^2,control = lmerControl(check.nobs.vs.nRE='ignore',check.nobs.vs.nlev='ignore'))
+summary(tlmm.bergman)
+CI <- confint.merMod(tlmm.bergman,method='Wald')
+CI[nrow(CI),]
+AIC(tlmm.bergman)
+
+# variance components
+vcv <- as.data.frame(lme4::VarCorr(tlmm.bergman))
+v_comps <- vcv %>% mutate(proportion = vcov/sum(vcov)) %>% select(grp, proportion)
+```
+
+Almost all (```r round(v_comps[5,2]*100)```%) variation is residual or attributed to species level residuals, little is attributed to other levels in the taxonomy. Nevertheless, the estimate for the over-all z-value is non-significant (i.e., the confidence interval overlaps zero). 
+
+```{r}
+plot(Bergman_full$z_response,
+     fitted(tlmm.bergman), 
+     ylim=c(-2,2),
+     pch=16,
+     xlab='Observed',
+     ylab='Fitted')
+abline(a=0,b=1)
+
+```
+
+The species level random effect allows the model to fit well, but the predictive performance is rather poor:
+
+```{r}
+
+# out of sample prediction - species
+ssamp <- 1:40
+lm.cv.spred = data.frame(matrix(NA,length(ssamp),3))
+for (i in ssamp){
+  this.lm.ins <- lme4::lmer(z_response~(1|species),data=Bergman_full[-i,], weights = 1/se^2,control = lmerControl(check.nobs.vs.nRE='ignore',check.nobs.vs.nlev='ignore'))
+  lm.cv.spred[i,] <- merTools::predictInterval(this.lm.ins,Bergman_full[i,],n.sims=500)
+  
+}
+
+plot(Bergman_full$z_response, lm.cv.spred[,1], pch=16, xlab='Observed', ylab='Predicted')
+abline(a=0,b=1)
+
+```
+
+Trying the MCMCglmm methods with phylogeny as suggested in H\&N: can't seem to make them work...
+
+```{r Try MCMCglmm}
+require(MCMCglmm)
+
+Bergman_mcmc <- Bergman_full
+Bergman_mcmc$animal <- gsub(' ','_',Bergman$species)
+Bergman_mcmc$Fam <- Bergman_mcmc$family
+Bergman_mcmc <- select(Bergman_mcmc,-family)
+Bergman_mcmc$mev <- 1/Bergman_mcmc$se^2
+
+try(lmm.bergman.mcmc <- MCMCglmm(z_response ~ 1, 
+                             random = ~animal, 
+                             data = Bergman_mcmc, 
+                             pedigree = Adams.phylo,
+                             mev=1/Bergman_mcmc$se^2,
+                             pr=TRUE,
+                             family='gaussian',
+                            nitt = 30000,
+                            thin=10,
+                            burnin=5000), silent=T)
+
+
+try(lmm2.bergman.mcmc <- MCMCglmm(z_response ~ 1, 
+                             random =  ~species +genus + Fam + order, 
+                             data = Bergman_mcmc, 
+                             mev=1/Bergman_mcmc$se^2,
+                             pr=TRUE), silent=T)
+
+try(lmm3.bergman.mcmc <- MCMCglmm(z_response ~ 1, 
+                             random = ~animal+ genus + Fam + order, 
+                             data = Bergman_mcmc, 
+                             mev=1/Bergman_mcmc$se^2,
+                             pedigree = Adams.phylo,
+                             pr=TRUE
+                             ), silent=T)
+
+#summary(lmm.bergman.mcmc)
+#summary(lmm2.bergman.mcmc)
+#summary(lmm3.bergman.mcmc)
+
+```
+
+None of these models work consistently; and when they doo mixing and convergence do not look ok, so can't really use to make inferences. 
+
+Finally, fit TaxMeta meta-analysis:
+
+```{r run anlysis, cache =TRUE}
 
 bergman_res_full <- TaxMeta(Bergman_full,
                        'z_response',
@@ -45,24 +161,28 @@ bergman_res_full <- TaxMeta(Bergman_full,
                        n.chains = 3,
                        n.iter = 150e3,
                        n.thin=30,
-                       n.burnin=25e3,
+                       n.burnin=20e3,
                        return_MCMC=T)
 
 bergman_res_full
+
 ```
+
+The result suggests a much wider interval for the intercept than the lmm or even the taxonomic LMM. We will compare this model to simpler model formulations later on.
 
 To plot the contributions of different taxonomic levels, simply plot the result:
 
 ```{r plot, fig.width = 7,  fig.height = 5}
 
-plot(bergman_res_full, 
-     taxonomy = taxonomy)
+plot(bergman_res_full)
 
 ```
 
+Again, the result deviates from estiamtes in the LMM, with variance components more balanced among taxonomic levels.
+
 To generate predictions at other taxonomic levels, simply add some bogus data to the data. Say, we need an estimate for a species for which the genus was not in the orginal dataset, but the family was part of the dataset:
 
-```{r predictions}
+```{r arbitrary taxonomic predictions, cache=TRUE}
 
 Bergman_pred <- Bergman_full
 Bergman_pred[length(Bergman_pred)+1,] <- Bergman_pred[11,]
@@ -91,9 +211,80 @@ bergman_res_pred
 
 ```
 
-We can also compare alternative model formulations:
+This easy prediction mechanism lets use compare leave-one out predictions on this small dataset relative to the ML LMM.
 
-```{r run alternative models}
+```{r check model fit, results='hide', message=FALSE}
+this.cvss <- matrix(NA,40, 3)
+for (i in 1:40){
+  
+  Bergman_test <- Bergman_full
+  Bergman_test[i,'z_response'] <- NA
+  
+  bergman_tests <- TaxMeta(Bergman_test,
+                           'z_response',
+                           distribution = 'norm',
+                           study_epsilon = 'se',
+                           taxonomy = taxonomy,
+                           type='full',
+                           loo_waic = T,
+                           n.chains = 3,
+                           n.iter = 15e3,
+                           n.thin=3,
+                           n.burnin=2e3,
+                           return_MCMC=F)
+  
+  means <- bergman_tests$result[[1]][,1]
+  q1 <- bergman_tests$result[[2]][,1]
+  q3 <- bergman_tests$result[[2]][,5]
+  pred <- means[grepl('pred',names(means))]
+  q1 <- q1[grepl('pred',names(q1))]
+  q3 <- q3[grepl('pred',names(q3))]
+  this.cvss[i,] <- cbind(q1,pred,q3)
+}
+```
+Plotting the results: 
+```{r fig.cap='Observed vs predicted Z-values from leave-one-out cross validation for the LMM with species level error (left) and the TaxMeta predictions (right). The error bars for predictions are the 95% prediction interval, the blue bars are the standard error of the individual Z-values.'}
+par(mfrow=c(1,2))
+# LM predictions
+plot(Bergman_full$z_response,lm.cv.spred[,1], pch=16,xlim=c(-2,2),ylim=c(-5,5))
+arrows(Bergman_full$z_response, lm.cv.spred[,2], Bergman_full$z_response, lm.cv.spred[,3], length=0.05, angle=90, code=3)
+points(Bergman_full$z_response,Bergman_full$z_response,pch=16,col=4)
+arrows(Bergman_full$z_response-Bergman_full$se,Bergman_full$z_response, Bergman_full$z_response+Bergman_full$se,Bergman_full$z_response, length=0.05, angle=90, code=3,col=4)
+abline(a=0,b=1)
+
+
+plot(Bergman_full$z_response,this.cvss[,2], pch=16,xlim=c(-2,2),ylim=c(-5,5))
+#points(insects_ss$lDD,lm.cv.spred[,1], col=4,pch=16)
+#arrows(insects_ss$lDD, lm.cv.spred[,2], insects_ss$lDD, lm.cv.spred[,3], length=0.05, angle=90, code=3,col=4)
+arrows(Bergman_full$z_response, this.cvss[,1], Bergman_full$z_response, this.cvss[,3], length=0.05, angle=90, code=3)
+points(Bergman_full$z_response,Bergman_full$z_response,pch=16,col=4)
+arrows(Bergman_full$z_response-Bergman_full$se,Bergman_full$z_response, Bergman_full$z_response+Bergman_full$se,Bergman_full$z_response, length=0.05, angle=90, code=3,col=4)
+abline(a=0,b=1)
+```
+
+Its difficult to comapre these predictions, so a weighted (by the variance of the ) sum of the likelihood of the data given the predictions (assuming roughly normal prediction intervals) can put a number on the prediction accuracy:
+
+```{r}
+# lmm
+sum(dnorm(Bergman_full$z_response,lm.cv.spred[,1],
+          (lm.cv.spred[,3]-lm.cv.spred[,2])/4,
+          log = T), 
+    weight = 1/Bergman_full$se^2)
+
+# TaxMeta
+sum(dnorm(Bergman_full$z_response,
+          this.cvs[,2],
+          (this.cvs[,3]-this.cvs[,1])/4,
+          log = T), 
+    weight = 1/Bergman_full$se^2)
+
+```
+
+This comparison suggests that the TaxMeta prediction intervals are closer to the data, suggesting that the model formulation may be slightly more appropriate.
+
+We can also compare alternative model formulations, using fixed priors for the individual taxonomic variance parameters (fixed), using only species level variation (akin to the simple LMM above), and using an over-all estiamte of the variance scale to inform all variance parameters (using gamma or uniform priors):
+
+```{r run alternative models, cache=TRUE}
 
 bergman_res_fixed <- TaxMeta(Bergman_full,
                        'z_response',
@@ -101,13 +292,31 @@ bergman_res_fixed <- TaxMeta(Bergman_full,
                        study_epsilon = 'se',
                        taxonomy = taxonomy,
                        type='fixed',
-                       scale=0.1,
+                       scale=0.01,
                        loo_waic = T,
                        n.chains = 3,
                        n.iter = 150e3,
                        n.thin=30,
-                       n.burnin=25e3,
+                       n.burnin=10e3,
                        return_MCMC=F)
+
+bergman_res_simple <- TaxMeta(Bergman_full,
+                       'z_response',
+                       distribution = 'norm',
+                       study_epsilon = 'se',
+                       taxonomy = taxonomy[1],
+                       type='fixed',
+                       scale=0.01,
+                       loo_waic = T,
+                       n.chains = 3,
+                       n.iter = 150e3,
+                       n.thin=30,
+                       n.burnin=10e3,
+                       return_MCMC=F)
+
+```
+
+```{r}
 
 bergman_res_gamma <- TaxMeta(Bergman_full,
                        'z_response',
@@ -142,18 +351,20 @@ And compare the results:
 ```{r compare}
 
 loo_comp <- loo::compare(bergman_res_fixed$loo,
-             bergman_res_gamma$loo,
-             bergman_res_unif$loo,
-             bergman_res_full$loo)
+                         bergman_res_simple$loo,
+                         bergman_res_gamma$loo,
+                         bergman_res_unif$loo,
+                         bergman_res_full$loo)
 
 loo_comp <- data.frame(loo_comp)
 loo_comp$model <- do.call('rbind',strsplit(rownames(loo_comp),split = '\\$'))[,1]
 loo_comp$loo_weight = loo_comp$weight
 
 waic_comp <- loo::compare(bergman_res_fixed$waic,
-             bergman_res_gamma$waic,
-             bergman_res_unif$waic,
-             bergman_res_full$waic)
+                          bergman_res_simple$waic,
+                          bergman_res_gamma$waic,
+                          bergman_res_unif$waic,
+                          bergman_res_full$waic)
 
 waic_comp <- data.frame(waic_comp)
 waic_comp$model <- do.call('rbind',strsplit(rownames(waic_comp),split = '\\$'))[,1]
@@ -174,9 +385,9 @@ This comparison does not give a good idea of model performance, so lets try a pl
 
 plot(Full=bergman_res_full, 
      Fixed =bergman_res_fixed, 
+     Simple =bergman_res_simpe, 
      Gamma =bergman_res_gamma,
-     Uniform=bergman_res_unif,
-     taxonomy=taxonomy)
+     Uniform=bergman_res_unif)
 
 ```
   
