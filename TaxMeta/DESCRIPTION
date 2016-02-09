@@ -2,9 +2,11 @@ Package: TaxMeta
 Title: Taxonomic and phylogenetic meta-analysis and comparative analysis
 Version: 0.0.0.0
 Authors@R: person("Philipp", "Neubauer", email = "philipp@dragonfly.co.nz", role = c("aut", "cre"))
+Author: Philipp Neubauer [aut, cre]
+Maintainer: Philipp Neubauer <philipp@dragonfly.co.nz>
 Description: Bayesian taxonomic and phylogenetic meta-analysis and comparative
     analysis
-Depends: rjags, ggplot2, dplyr
+Depends: rjags, ggplot2, dplyr, coda, loo
 Suggests: knitr,
     rmarkdown
 Vignettebuilder: knitr

@@ -14,7 +14,7 @@ print.TaxMeta <- function(res){
 
   if(all(!is(res$result)=="summary.mcmc")) {
 
-    result <- summary(as.mcmc(lapply(res$result,function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))]))))
+    result <- summary(coda::as.mcmc(lapply(res$result,function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))]))))
   } else {
     result <- res$result
   }

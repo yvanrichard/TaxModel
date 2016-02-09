@@ -34,221 +34,226 @@
 #'
 #' @export
 TaxMeta <- function(dataset,
-                    response,
-                    distribution,
-                    study_epsilon = NULL,
-                    taxonomy = c('species','genus','family','order'),
-                    save_tax = NULL,
-                    cont_cov = NULL,
-                    fixed_fx = NULL,
-                    random_fx = NULL,
-                    tree = NULL,
-                    scale = NULL,
-                    type='full',
-                    regr_priors = NULL,
-                    loo_waic = F,
-                    n.chains = 3,
-                    n.iter = 25e3,
-                    n.thin=1e1,
-                    n.burnin=5e3,
-                    return_MCMC=F,
-                    ...
-){
+            response,
+            distribution,
+            study_epsilon = NULL,
+            taxonomy = c('species','genus','family','order'),
+            save_tax = NULL,
+            cont_cov = NULL,
+            fixed_fx = NULL,
+            random_fx = NULL,
+            tree = NULL,
+            scale = NULL,
+            type='full',
+            regr_priors = NULL,
+            loo_waic = F,
+            n.chains = 3,
+            n.iter = 25e3,
+            n.thin=1e1,
+            n.burnin=5e3,
+            return_MCMC=F,
+            save_mod_data=F,
+            ...
+            ){
 
+    timestamp <- format(Sys.time(), '%Y-%m-%d_%H-%M')
+    modfile <- paste0(timestamp, "_taxmodel.R")
+    
+    ##   if(is.null(scale)) {
+    ##    scalefunc <- function(scale, max_data) abs(bayou::phalfcauchy(max_data, scale = scale)-0.75)
+    ##    scale <- optimize(scalefunc,interval = c(0.001,1000),max(abs(dataset[,response])), maximum = F)$objective
+    ##   }
 
-#   if(is.null(scale)) {
-#    scalefunc <- function(scale, max_data) abs(bayou::phalfcauchy(max_data, scale = scale)-0.75)
-#    scale <- optimize(scalefunc,interval = c(0.001,1000),max(abs(dataset[,response])), maximum = F)$objective
-#   }
+    ##---- impute taxonomy
+    if(!all(taxonomy %in% colnames(dataset))){
+        stop("\n Full taxonomy not in dataset, please use the 'get_tax' function to get the taxonomy using the taxize package.", immediate. = T)
 
-  ##---- impute taxonomy
-  if(!all(taxonomy %in% colnames(dataset))){
-    stop("\n Full taxonomy not in dataset, please use the 'get_tax' function to get the taxonomy using the taxize package.", immediate. = T)
+    }
 
-  }
+    ##--- lower case taxonomy names
 
-  ##--- lower case taxonomy names
+    tix <- match(taxonomy, colnames(dataset))
+    ## just to make sure its not factors!
+    dataset[,taxonomy] <- apply(dataset[, taxonomy, drop=FALSE], 2, as.character)
+    taxonomy <- tolower(taxonomy)
+    colnames(dataset)[tix] <- taxonomy
 
-  tix <- match(taxonomy, colnames(dataset))
-  # just to make sure its not factors!
-  if(length(taxonomy)>1) {
-    dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
-  } else {
-    dataset[,taxonomy] <- as.character(dataset[,taxonomy])
-  }
-  taxonomy <- tolower(taxonomy)
-  colnames(dataset)[tix] <- taxonomy
+    NOBS <- nrow(dataset)
+    resp <- dataset[,response]
+    ## take out predictions from
+    not_pred <- which(!is.na(resp))
+    nnot_pred <- length(not_pred)
+    preds <- which(is.na(resp))
+    npreds <- length(preds)
 
+    ##---- test for study epsilon and estimable effects
+    if(is.null(study_epsilon)) {
 
-  NOBS = nrow(dataset)
-  resp <- dataset[,response]
-  # take out predictions from
-  not_pred <- which(!is.na(resp))
-  nnot_pred <- length(not_pred)
-  preds <- which(is.na(resp))
-  npreds <- length(preds)
+        if(!any(table(dataset[,taxonomy[1]])>1)){
+            warning("\n No study_epsilon given and no replication at highest taxonomic resolution; trying to estimate epsilon by dropping highest taxonomic level. If this is not what you want, abort now!",immediate. = T)
 
-  afn <- function(x) as.numeric(factor(x))
+            taxonomy <- taxonomy[-1]
 
-  ##---- test for study epsilon and estimable effects
-  if(is.null(study_epsilon)) {
+        } else {
+            warning("\n No study_epsilon given; trying to estimate epsilon",immediate. = T)
+        }
+    }
 
-    if(!any(table(dataset[,taxonomy[1]])>1)){
-      warning("\n no study_epsilon given and no replication at highest taxonomic resolution; trying to estimate epsilon by dropping highest taxonomic level. If this is not what you want, abort now!",immediate. = T)
+    ##---- taxonomic effects
+    model_tax <- list()
+    ntax <- length(taxonomy)
+    taxix <- matrix(NA, NOBS, ntax)
+    ##precaution
+    ##dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
 
-      taxonomy <- taxonomy[-1]
+    sp.as.genus.sp <- grepl(' ',dataset[,'species'])
+    if(!all(sp.as.genus.sp))
+        dataset[!sp.as.genus.sp, 'species'] <-
+          apply(dataset[!sp.as.genus.sp, c('genus','species')], 1, paste, collapse=' ')
+    taxonomy <- c(taxonomy, "grand")
 
+    afn <- function(x) as.numeric(factor(x))
+
+    for (t in 1:ntax){
+        taxix[,t] <- afn(dataset[,taxonomy[t]])
+        model_tax[[t]] <- .parse_tax(taxonomy[t], taxonomy[t+1], taxix[,t], type)
+    }
+
+    ##---- random effects
+    if(!is.null(random_fx)){
+        model_rfx <- list()
+        nrfx <- length(random_fx)
+        rfxix <- matrix(NA, NOBS, nrfx)
+        for (r in 1:nrfx){
+            rfxix[,r] <- afn(dataset[,random_fx[r]])
+            model_rfx[[r]] <- .parse_rfx(random_fx[r],rfxix[,r],type)
+        }
+    }
+
+    ##---- fixed and continuous effects
+    if(!is.null(fixed_fx)) {
+        if (length(fixed_fx)>1)
+            stop('More than one fixed effects specified, which is not yet supported')
+        covs <- model.matrix(~factor(dataset[,fixed_fx]))
     } else {
-      warning("\n no study_epsilon given; trying to estimate epsilon",immediate. = T)
+        covs <- data.frame(rep(1,NOBS))
+    }
+    if(!is.null(cont_cov)) {
+        covs <- cbind(covs, dataset[,cont_cov])
+    }
+    ncovs <- ncol(covs)
+
+    if(!is.null(regr_priors)) {
+        regr_mu <- regr_priors[,1]
+        regr_tau <- 1/regr_priors[,2]
+    } else {
+        regr_mu <- rep(0,ncovs)
+        regr_tau <- rep(1e-6,ncovs)
     }
 
-  }
+    ## sub lognorml
+    distribution_sub <- distribution
+    if (distribution == 'lnorm')
+        distribution_sub <- 'norm'
 
-  ##---- taxonomic effects
-  model_tax <- list()
-  ntax <- length(taxonomy)
-  taxix <- matrix(NA, NOBS, ntax)
-  #precaution
-  #dataset[,taxonomy] <- apply(dataset[,taxonomy],2,as.character)
+    Model <- cat(
+                "model{ \n\n",
+                "# Data and prediction likelihood \n",
+                "for(i in 1:NOBS){ \n\t",
+                ifelse(loo_waic,
+                       paste0("log_lik[i] <- logdensity.",distribution_sub,"(resp[i],",
+                              .parse_dist(distribution, study_epsilon),') \n',''), ''),
+                paste0("\tresp[i] ~ d",distribution_sub,'(',.parse_dist(distribution, study_epsilon),')'), '\n',
+                "\tmu[i] <- betas[1:ncovs] %*% covs[i,1:ncovs] + ",
+                ifelse(!is.null(random_fx),
+                       paste0(paste0(random_fx,'_mu[rfxix[i,',1:nrfx,']]',collapse=' + '),' + '),''),
+                paste0(taxonomy[1:ntax],'_mu[taxix[i,',1:ntax,']]',collapse=' + '),"} \n",
+                "\n# Likelihood for loo and waic for observations only \n",
+                '# Save predictions \n',
+                ifelse(any(preds),paste0("for(i in 1:npreds){ \n",
+                                         ifelse(!is.null(study_epsilon),
+                                                "\tpred[i] <- resp[preds[i]] \n} \n",
+                                                "\tpred[i] <- mu[preds[i]] \n} \n")),''),
+                "\n# Fixed and regression effects \n",
+                .parse.fixed_fx(ncovs),
+                "\n# Random effects \n",
+                ifelse(!is.null(random_fx),paste(paste(model_rfx),collapse='\n'),''),
+                "\n# Taxonomic effects \n",
+                paste(paste(model_tax),collapse='\n'),
+                "\n\n# Scale model \n",
+                .parse_scale_model(type),
+                "\n# Estimate epsilon if needed \n",
+                ifelse(is.null(study_epsilon),
+                       "epsilon ~ dgamma(1e-6,1e-6) \nsd.epsilon <- sqrt(1/epsilon)",''),
+           "}", sep='', file=modfile)
 
-  if(!all(grepl(' ',dataset[,'species']))) dataset[!grepl(' ',dataset[,'species']),'species'] <- apply(dataset[!grepl(' ',dataset[,'species']),c('genus','species')],1,paste,collapse=' ')
-  taxonomy <- c(taxonomy,"grand")
-  for (t in 1:ntax){
-    taxix[,t] <- afn(dataset[,taxonomy[t]])
-    model_tax[[t]] <- .parse_tax(taxonomy[t],taxonomy[t+1],taxix[,t],type)
-  }
 
+###---- run jags model
 
-  ##---- random effects
-  if(!is.null(random_fx)){
-    model_rfx <- list()
-    nrfx <- length(random_fx)
-    rfxix <- matrix(NA, NOBS, nrfx)
-    for (r in 1:nrfx){
-      rfxix[,r] <- afn(dataset[,random_fx[r]])
-      model_rfx[[r]] <- .parse_rfx(random_fx[r],rfxix[,r],type)
+    params <- .parse.params(type, preds, loo_waic, taxonomy[1:ntax], study_epsilon, random_fx, save_tax)
+    datas <- list(NOBS=NOBS,
+                 ncovs=ncovs,
+                 covs=covs,
+                 taxix=taxix,
+                 resp=resp,
+                 regr_mu=regr_mu,
+                 regr_tau=regr_tau
+                 )
+
+    if(type=='fixed')
+        datas$scale <- scale
+    if(any(preds)) {
+        datas$preds <- preds
+        datas$npreds <- npreds
     }
-  }
+    if(!is.null(study_epsilon))
+        datas$epsilon <- 1/dataset[,study_epsilon]^2
 
-  ##---- fixed and continuous effects
-  if(!is.null(fixed_fx)) {covs <- model.matrix(~factor(dataset[,fixed_fx]))} else {covs <- data.frame(rep(1,NOBS))}
-  if(!is.null(cont_cov)) {covs <- cbind(covs,dataset[,cont_cov])}
-  ncovs = ncol(covs)
+    ##attach(data.frame(apply(dataset[,taxonomy[1:ntax]],2,afn)))
+    if(type=='full')
+        datas[taxonomy[2:ntax]] <- lapply(taxonomy[2:ntax], get,
+                                         data.frame(apply(dataset[,taxonomy[2:ntax]], 2, afn)))
 
-  if(!is.null(regr_priors)){
-    regr_mu <- regr_priors[,1]
-    regr_tau <- 1/regr_priors[,2]
-  } else {
-    regr_mu <- rep(0,ncovs)
-    regr_tau <- rep(1e-6,ncovs)
-  }
+    if(!is.null(random_fx)){
+        ##attach(data.frame(apply(dataset[,random_fx[1:nrfx]],2,afn)))
+        ##datas[random_fx[1:ntax]] <- lapply(random_fx[1:nrfx],get,2)
+        datas$rfxix <- rfxix
+    }
 
-  # sub lognorml
-  distribution_sub <- distribution
-  if(distribution=='lnorm') distribution_sub = 'norm'
+    if (save_mod_data)
+        save(datas, file=paste0(timestamp, '_model_data.rdata'))
 
-  Model <- cat(
-    "model{ \n",
-    "#data and prediction likelihood \n",
-    "for(i in 1:NOBS){ \n",
-    ifelse(loo_waic,paste0("log_lik[i] <- logdensity.",distribution_sub,"(resp[i],",.parse_dist(distribution, study_epsilon),') \n',''),''),
-    paste0("resp[i] ~ d",distribution_sub,'(',.parse_dist(distribution, study_epsilon),')'), '\n',
-    "mu[i] <-betas[1:ncovs]%*%covs[i,1:ncovs] +",
-    ifelse(!is.null(random_fx),paste(paste0(random_fx,'_mu[rfxix[i,',1:nrfx,']]',collapse='+'),'+'),''),
-    paste0(taxonomy[1:ntax],'_mu[taxix[i,',1:ntax,']]',collapse='+'),"} \n",
-    "# likelihood for loo and waic for observations only \n",
-    '# save predictions \n',
-    ifelse(any(preds),paste0("for(i in 1:npreds){ \n",
-                             ifelse(!is.null(study_epsilon),
-                                    "pred[i] <- resp[preds[i]] \n} \n",
-                                    "pred[i] <- mu[preds[i]] \n} \n")),''),
-    "# fixed and regression effects \n",
-    .parse.fixed_fx(ncovs),
-    "# random effects \n",
-    ifelse(!is.null(random_fx),paste(paste(model_rfx),collapse='\n'),''),
-    "# taxonomic effects \n",
-    paste(paste(model_tax),collapse='\n'),
-    "# scale model \n",
-    .parse_scale_model(type),
-    "# estimate epsilon if needed \n",
-    ifelse(is.null(study_epsilon),
-           "epsilon ~ dgamma(1e-6,1e-6) \n
-           sd.epsilon <- sqrt(1/epsilon)",''),
-    "}", file='taxmodel.R')
+    ## Run model
+    TM <- jags.model(file     = modfile,
+                    n.chains = n.chains,
+                    data     = datas)
 
+    update(TM, n.burnin)
+    res <- coda.samples(TM, variable.names = params,
+                       n.iter = n.iter, thin = n.thin)
 
-  ###---- run jags model
+    res <- lapply(res, function(re) {
+        colnames(re)[grepl('betas',colnames(re))] <-
+          c('Intercept', unlist(apply(data.frame(dataset[,fixed_fx]), 2, function(x) sort(unique(x))))[-1], cont_cov)
+        re
+    })
 
-  params <- .parse.params(type, preds, loo_waic,taxonomy[1:ntax],study_epsilon, random_fx, save_tax)
-  datas <- list(NOBS=NOBS,
-                ncovs=ncovs,
-                covs=covs,
-                taxix=taxix,
-                resp=resp,
-                regr_mu=regr_mu,
-                regr_tau=regr_tau
-  )
+    cres <- do.call('rbind',res)
 
-  if(type=='fixed') datas$scale=scale
-  if(any(preds)) {
-    datas$preds=preds
-    datas$npreds=npreds
-  }
-  if(!is.null(study_epsilon)) datas$epsilon = 1/dataset[,study_epsilon]^2
+    res <- coda::as.mcmc(lapply(res, function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))])))
 
-  #attach(data.frame(apply(dataset[,taxonomy[1:ntax]],2,afn)))
-  if(type=='full') datas[taxonomy[2:ntax]] <- lapply(taxonomy[2:ntax],get,data.frame(apply(dataset[,taxonomy[2:ntax]],2,afn)))
+    diagn <- try(gelman.diag(coda::as.mcmc(lapply(res, function(x) coda::as.mcmc(x[, !grepl('pred',colnames(x))])))))
 
-  if(!is.null(random_fx)){
-    #attach(data.frame(apply(dataset[,random_fx[1:nrfx]],2,afn)))
-    #datas[random_fx[1:ntax]] <- lapply(random_fx[1:nrfx],get,2)
-    datas$rfxix=rfxix
-  }
+    if(!return_MCMC) {
+        res <- summary(res)
+    }
 
-  TM <- jags.model(file = 'taxmodel.R',
-                   n.chains = n.chains,
-                   data=datas)
-
-  update(TM, n.burnin)
-  res <- coda.samples(TM, variable.names = params,
-                      n.iter = n.iter,thin = n.thin)
-
-  res <- lapply(res, function(re) {
-    colnames(re)[grepl('betas',colnames(re))] <- c('Intercept',unlist(apply(data.frame(dataset[,fixed_fx]),2,function(x) sort(unique(x)))),cont_cov)
-    re
-  })
-
-
-  cres <- do.call('rbind',res)
-  colnames(cres)[grepl('betas',colnames(cres))] <- c('Intercept',unlist(apply(data.frame(dataset[,fixed_fx]),2,function(x) sort(unique(x)))),cont_cov)
-
-
-  res <- as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('log_lik',colnames(x))])))
-
-  diagn <- try(gelman.diag(as.mcmc(lapply(res,function(x) as.mcmc(x[,!grepl('pred',colnames(x))])))))
-
-  if(!return_MCMC) {
-    res <- summary(res)
-  }
-
-  if(loo_waic==T) {
-    res_out <- list(
-      taxonomy = taxonomy,
-      random_fx = random_fx,
-      result=res,
-      convergence = diagn,
-      waic = loo::waic(cres[,grepl('log_lik',colnames(cres))]),
-      loo = loo::loo(cres[,grepl('log_lik',colnames(cres))])
-    )
-  } else {
-
-    res_out <- list(
-      taxonomy = taxonomy,
-      random_fx = random_fx,
-      result=res,
-      convergence = diagn)
-
-  }
-  class(res_out) <- 'TaxMeta'
-  res_out
+    res_out <- list(taxonomy = taxonomy, random_fx = random_fx, 
+                   result = res, convergence = diagn)
+    if (loo_waic == T) {
+        res_out <- c(res_out, list(waic = loo::waic(cres[, grepl("log_lik", colnames(cres))]),
+                                  loo = loo::loo(cres[, grepl("log_lik", colnames(cres))])))
+    }
+    class(res_out) <- 'TaxMeta'
+    res_out
 }

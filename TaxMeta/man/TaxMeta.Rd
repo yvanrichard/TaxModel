@@ -5,10 +5,11 @@
 \title{Meta-analysis useing nested hierarchical models}
 \usage{
 TaxMeta(dataset, response, distribution, study_epsilon = NULL,
-  taxonomy = c("species", "genus", "family", "order"), cont_cov = NULL,
+  taxonomy = c("species", "genus", "family", "order"), 
+  save_tax = NULL, cont_cov = NULL,
   fixed_fx = NULL, random_fx = NULL, tree = NULL, scale = NULL,
-  type = "full", loo_waic = F, n.chains = 3, n.iter = 25000,
-  n.thin = 10, n.burnin = 5000, return_MCMC = F, ...)
+  type = "full", regr_priors = NULL, loo_waic = F, n.chains = 3, n.iter = 25000,
+  n.thin = 10, n.burnin = 5000, return_MCMC = F, save_mod_data=F,...)
 }
 \arguments{
 \item{response}{the (column) name of the response variable}
@@ -24,6 +25,7 @@ TaxMeta(dataset, response, distribution, study_epsilon = NULL,
 
 \item{taxonomy}{the column names of taxonomic levels to be considered. To be given in the order from highest resolution (e.g., species) to lowest (e.g., order). For species names, please ensure that these are unique for unique species, or use a [genus species] in the species column.}
 
+\item{save_tax}{TODO...}
 \item{cont_cov}{column names of continuous covariates, if any.}
 
 \item{fixed_fx}{column names of fixed effects, if any.}
@@ -42,6 +44,7 @@ TaxMeta(dataset, response, distribution, study_epsilon = NULL,
  \item \code{fixed} the scale for all t(axonomic and non-taxonomic) random effects is fixed to \code{scale}.
 }}
 
+\item{regr_priors}{TODO...}
 \item{loo_waic}{pseudo leave-one-out cross validation (see Vehtari et al., 2015) and Wanatabe (or widely applicable) information criterion (Wanatabe, 2010). NOTE that this option leads to large output objects for large datasets, that may fill all your memory (and crash your machine)!}
 
 \item{n.chains}{number of MCMC chains (default 3)}
@@ -52,7 +55,8 @@ TaxMeta(dataset, response, distribution, study_epsilon = NULL,
 
 \item{n.burnin}{number of burnin iterations to discard (default 5e3)}
 
-\item{return_MCMC}{return MCMC chains or just summary statistics (default).}
+\item{return_MCMC}{return MCMC chains or just summary statistics (default)}
+\item{save_mod_data}{save model data that are passed to jags.model.}
 }
 \value{
 A (list) object of class TaxMeta

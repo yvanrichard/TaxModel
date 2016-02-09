@@ -2,6 +2,7 @@
 #' @param dataset a dataframe for meta-analysis, containing species names
 #' @param taxonomy the taxonomy to retrieve
 #' @export
+
 get_tax <- function(dataset, taxonomy){
   if(all(grepl(' ',dataset[,'species']))){
     cs <- try(taxize::classification(dataset[,'species'], db = 'ncbi'), silent=T)
@@ -34,15 +35,15 @@ get_tax <- function(dataset, taxonomy){
 
   if (type != 'full'){
 
-  paste0("for(r in 1:",max(rfxix),") { \n",
-         random_fx,"_mu[r] <- ",random_fx,".xi*",random_fx,".eta[r] \n",
+  paste0("for(r in 1:",max(rfxix),") { \n\t",
+         random_fx,"_mu[r] <- ",random_fx,".xi * ",random_fx,".eta[r] \n\t",
          random_fx,".eta[r] ~ dnorm(0,",random_fx,".prec) \n } \n",
          random_fx,".xi ~ dnorm(0,scale) \n",
          random_fx,".prec ~ dgamma(0.5,0.5) \n",
          "sd.",random_fx," <- sd(",random_fx,"_mu)")
   } else {
-    paste0("for(r in 1:",max(rfxix),") { \n",
-           random_fx,"_mu[r] <- ",random_fx,".xi*",random_fx,".eta[r] \n",
+    paste0("for(r in 1:",max(rfxix),") { \n\t",
+           random_fx,"_mu[r] <- ",random_fx,".xi * ",random_fx,".eta[r] \n\t",
            random_fx,".eta[r] ~ dnorm(0,",random_fx,".prec) \n } \n",
            random_fx,".prec ~ dgamma(0.5,0.5) \n",
            "sd.",random_fx," <- sd(",random_fx,"_mu) \n",
@@ -58,8 +59,8 @@ get_tax <- function(dataset, taxonomy){
 
     if(type != "full"){
 
-      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n",
-             tax_fx,"_mu[r] <- ",tax_next,".xi*",tax_fx,".eta[r] \n",
+      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n\t",
+             tax_fx,"_mu[r] <- ",tax_next,".xi * ",tax_fx,".eta[r] \n\t",
              tax_fx,".eta[r] ~ dnorm(0,",tax_next,".prec) \n } \n",
              tax_next,".xi ~ dnorm(0,scale) \n",
              tax_next,".prec ~ dgamma(0.5,0.5) \n",
@@ -67,9 +68,11 @@ get_tax <- function(dataset, taxonomy){
              "sd.",tax_fx," <- sd(",tax_fx,"_mu) \n")
     } else {
 
-      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n",
-             tax_fx,"_mu[r] <- ",tax_next,".xi",ifelse(tax_next != "grand",paste0('[',tax_next,'[r]]'),''),"*",tax_fx,".eta[r] \n",
-             tax_fx,".eta[r] ~ dnorm(0,",tax_next,".prec) \n",
+      paste0("for(r in 1:",max(taxix, na.rm=T),") { \n\t",
+             tax_fx,"_mu[r] <- ",tax_next,".xi", ifelse(tax_next != "grand",
+                                                        paste0('[',tax_next,'[r]]'), ''),
+             " * ",tax_fx,".eta[r] \n\t",
+             tax_fx,".eta[r] ~ dnorm(0,",tax_next,".prec) \n\t",
              tax_fx,".xi[r] ~ dnorm(0,",tax_fx,"_scale) \n} \n",
              tax_fx,"_scale ~ dgamma(2,hyper_scale) \n",
              #tax_fx,".xi_pred ~ dnorm(0,",tax_fx,"_scale) \n",
@@ -99,8 +102,8 @@ get_tax <- function(dataset, taxonomy){
 
 .parse.fixed_fx <- function(ncov) {
 
-  paste0("for(b in 1:",ncov,") { \n",
-          "betas[b] ~ dnorm(regr_mu[b],regr_tau[b]) \n",
+  paste0("for(b in 1:",ncov,") { \n\t",
+          "betas[b] ~ dnorm(regr_mu[b], regr_tau[b]) \n",
          "} \n")
 
   }
